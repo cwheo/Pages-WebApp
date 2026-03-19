@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1976D2">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DayPick">
+  <title>DayPick</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                   'Helvetica Neue', Arial, 'Noto Sans KR', sans-serif;
+      background: #F5F5F5;
+      min-height: 100vh;
+      color: #212121;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #1976D2;
+      color: #fff;
+      text-align: center;
+      padding: 16px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    main {
+      padding: 12px 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .date-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .date-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 56px;
+      padding: 0 16px;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+      border-left: 4px solid transparent;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .date-item:active {
+      transform: scale(0.98);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+
+    .date-item:hover {
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    /* 오늘 스타일 */
+    .date-item.today {
+      background: #E3F2FD;
+      border-left: 4px solid #1976D2;
+    }
+
+    .date-item.today .date-text {
+      font-weight: 700;
+    }
+
+    /* 토요일 */
+    .date-item .date-text.saturday {
+      color: #1565C0;
+    }
+
+    /* 일요일 */
+    .date-item .date-text.sunday {
+      color: #D32F2F;
+    }
+
+    .date-text {
+      font-size: 1.05rem;
+      flex: 1;
+    }
+
+    .badge-today {
+      display: inline-block;
+      background: #1976D2;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: 10px;
+      letter-spacing: 0.03em;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+
+    .copy-icon {
+      opacity: 0.35;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    /* 토스트 */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(0);
+      background: #323232;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    #toast.show {
+      opacity: 1;
+    }
+
+    @media (max-width: 400px) {
+      .date-text {
+        font-size: 0.97rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>DayPick</header>
+
+  <main>
+    <ul class="date-list" id="dateList"></ul>
+  </main>
+
+  <div id="toast"></div>
+
+  <script>
+    (function () {
+      const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+      /**
+       * 날짜를 "2026-03-19(목)" 형식 문자열로 변환
+       * @param {Date} date
+       * @returns {string}
+       */
+      function formatDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        const day = DAY_NAMES[date.getDay()];
+        return `${y}-${m}-${d}(${day})`;
+      }
+
+      /**
+       * 날짜 목록 렌더링 (오늘 포함 14일 전까지, 총 15개)
+       */
+      function renderDates() {
+        const list = document.getElementById('dateList');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        for (let i = 0; i < 15; i++) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+
+          const formatted = formatDate(d);
+          const dayOfWeek = d.getDay(); // 0=일, 6=토
+
+          const li = document.createElement('li');
+          li.className = 'date-item' + (i === 0 ? ' today' : '');
+          li.setAttribute('role', 'button');
+          li.setAttribute('tabindex', '0');
+          li.setAttribute('aria-label', `${formatted} 복사`);
+
+          // 날짜 텍스트 span
+          const span = document.createElement('span');
+          span.className = 'date-text';
+          if (dayOfWeek === 6) span.classList.add('saturday');
+          if (dayOfWeek === 0) span.classList.add('sunday');
+          span.textContent = formatted;
+
+          li.appendChild(span);
+
+          // 오늘 뱃지
+          if (i === 0) {
+            const badge = document.createElement('span');
+            badge.className = 'badge-today';
+            badge.textContent = '오늘';
+            li.appendChild(badge);
+          }
+
+          // 복사 아이콘 (SVG)
+          const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          icon.setAttribute('width', '18');
+          icon.setAttribute('height', '18');
+          icon.setAttribute('viewBox', '0 0 24 24');
+          icon.setAttribute('fill', 'none');
+          icon.setAttribute('stroke', 'currentColor');
+          icon.setAttribute('stroke-width', '2');
+          icon.setAttribute('stroke-linecap', 'round');
+          icon.setAttribute('stroke-linejoin', 'round');
+          icon.classList.add('copy-icon');
+          icon.innerHTML =
+            '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>' +
+            '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
+          li.appendChild(icon);
+
+          // 클릭 핸들러
+          li.addEventListener('click', function () {
+            copyDate(formatted);
+          });
+
+          // 키보드 접근성
+          li.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              copyDate(formatted);
+            }
+          });
+
+          list.appendChild(li);
+        }
+      }
+
+      // 토스트 타이머
+      let toastTimer = null;
+
+      /**
+       * 클립보드에 날짜 복사 후 토스트 표시
+       * @param {string} formatted - "2026-03-19(목)" 형식
+       */
+      function copyDate(formatted) {
+        const textToCopy = formatted + ' '; // 뒤에 공백 추가
+
+        navigator.clipboard.writeText(textToCopy).then(function () {
+          showToast(formatted + ' 복사되었습니다');
+        }).catch(function () {
+          // 클립보드 API 미지원 폴백
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = textToCopy;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast(formatted + ' 복사되었습니다');
+          } catch (err) {
+            showToast('복사에 실패했습니다');
+          }
+        });
+      }
+
+      /**
+       * 토스트 메시지 표시
+       * @param {string} message
+       */
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+        }
+
+        toastTimer = setTimeout(function () {
+          toast.classList.remove('show');
+          toastTimer = null;
+        }, 2000);
+      }
+
+      // 서비스 워커 등록
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function (err) {
+            console.warn('Service Worker 등록 실패:', err);
+          });
+        });
+      }
+
+      // 초기 렌더링
+      renderDates();
+    })();
+  </script>
+</body>
+</html>
