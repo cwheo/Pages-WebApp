@@ -2,6 +2,7 @@
   "name": "DayPick",
   "short_name": "DayPick",
   "description": "날짜 선택 및 클립보드 복사",
+  "version": "1.0.1",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

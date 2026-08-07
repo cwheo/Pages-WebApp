@@ -1,5 +1,7 @@
 // Service Worker for DayPick PWA
-const CACHE_NAME = 'daypick-v1';
+// CACHE_NAME 은 앱 버전과 동기화됩니다 (09_ChangeVersionName.py 가 변경).
+// 버전이 바뀌면 캐시명이 바뀌어 이전 캐시가 폐기되고 새 파일을 받습니다.
+const CACHE_NAME = 'daypick-v1.0.1';
 
 const FILES_TO_CACHE = [
   './',

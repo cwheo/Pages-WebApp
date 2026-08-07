@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DayPick Icon Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #F5F5F5;
+      color: #212121;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1976D2;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      color: #757575;
+      margin-bottom: 40px;
+      font-size: 14px;
+    }
+
+    .icon-grid {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    .icon-card {
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .icon-card h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #424242;
+    }
+
+    .canvas-wrapper {
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #E0E0E0;
+    }
+
+    .btn-download {
+      background: #1976D2;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+
+    .btn-download:hover { background: #1565C0; }
+
+    .btn-all {
+      background: #388E3C;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 40px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-all:hover { background: #2E7D32; }
+
+    .status {
+      margin-top: 20px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      background: #E3F2FD;
+      color: #0D47A1;
+      font-size: 14px;
+      display: none;
+    }
+
+    .instructions {
+      max-width: 560px;
+      background: #FFF8E1;
+      border-left: 4px solid #FFA000;
+      border-radius: 4px;
+      padding: 16px 20px;
+      margin-top: 32px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #5D4037;
+    }
+
+    .instructions strong { color: #E65100; }
+  </style>
+</head>
+<body>
+
+  <h1>DayPick PWA Icon Generator</h1>
+  <p class="subtitle">Open this file in a browser to generate and download PNG icons from the SVG source.</p>
+
+  <div class="icon-grid">
+    <!-- 192x192 -->
+    <div class="icon-card">
+      <h2>icon-192.png &nbsp;(192 &times; 192)</h2>
+      <div class="canvas-wrapper">
+        <canvas id="canvas192" width="192" height="192"></canvas>
+      </div>
+      <a id="dl192" class="btn-download" href="#" download="icon-192.png">Download 192x192</a>
+    </div>
+
+    <!-- 512x512 — shown at 256 for display, full size on export -->
+    <div class="icon-card">
+      <h2>icon-512.png &nbsp;(512 &times; 512)</h2>
+      <div class="canvas-wrapper">
+        <canvas id="canvas512preview" width="256" height="256" style="display:block;"></canvas>
+      </div>
+      <a id="dl512" class="btn-download" href="#" download="icon-512.png">Download 512x512</a>
+    </div>
+  </div>
+
+  <!-- Hidden full-res 512 canvas -->
+  <canvas id="canvas512" width="512" height="512" style="display:none;"></canvas>
+
+  <button class="btn-all" onclick="downloadAll()">Download Both Icons</button>
+
+  <div class="status" id="status">Icons are ready! Check your Downloads folder.</div>
+
+  <div class="instructions">
+    <strong>Instructions:</strong><br>
+    1. Open this file in Chrome, Edge, or Firefox (double-click it).<br>
+    2. The icons will render automatically from <code>icon.svg</code>.<br>
+    3. Click <strong>Download</strong> to save each PNG, or use <strong>Download Both Icons</strong>.<br>
+    4. Move the downloaded files into this <code>icons/</code> folder and rename them
+       <code>icon-192.png</code> and <code>icon-512.png</code>.<br><br>
+    <strong>Note:</strong> Both files must be in the same folder for the SVG to load correctly.
+  </div>
+
+  <script>
+    const SVG_PATH = 'icon.svg';
+
+    /**
+     * Load the SVG as a data URL, draw it onto a canvas at the given size,
+     * then return the PNG data URL.
+     */
+    function renderSvgToCanvas(canvas, size) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, size, size);
+          ctx.drawImage(img, 0, 0, size, size);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => reject(new Error('Failed to load SVG. Make sure icon.svg is in the same folder.'));
+        // Use cache-busting to avoid stale cached versions
+        img.src = SVG_PATH + '?v=' + Date.now();
+      });
+    }
+
+    /**
+     * Set up a download link with the given PNG data URL.
+     */
+    function wireDownloadLink(linkId, dataUrl, filename) {
+      const link = document.getElementById(linkId);
+      link.href = dataUrl;
+      link.download = filename;
+    }
+
+    /**
+     * Main init: render both sizes.
+     */
+    async function init() {
+      try {
+        // --- 192x192 ---
+        const canvas192 = document.getElementById('canvas192');
+        const png192 = await renderSvgToCanvas(canvas192, 192);
+        wireDownloadLink('dl192', png192, 'icon-192.png');
+
+        // --- 512x512 (full resolution, hidden canvas) ---
+        const canvas512 = document.getElementById('canvas512');
+        const png512 = await renderSvgToCanvas(canvas512, 512);
+        wireDownloadLink('dl512', png512, 'icon-512.png');
+
+        // --- Preview of 512 (shown at 256px display size) ---
+        const preview = document.getElementById('canvas512preview');
+        const ctxPrev = preview.getContext('2d');
+        ctxPrev.drawImage(canvas512, 0, 0, 256, 256);
+
+      } catch (err) {
+        alert('Error: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    function downloadAll() {
+      document.getElementById('dl192').click();
+      setTimeout(() => {
+        document.getElementById('dl512').click();
+        const status = document.getElementById('status');
+        status.style.display = 'block';
+        setTimeout(() => { status.style.display = 'none'; }, 4000);
+      }, 600);
+    }
+
+    window.addEventListener('load', init);
+  </script>
+
+</body>
+</html>

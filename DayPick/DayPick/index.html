@@ -26,10 +26,16 @@
       color: #212121;
     }
 
-    header {
+    /* 상단 고정 영역 (헤더 + 설정 바) */
+    .top-bar {
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    header {
+      position: relative;
       background: #1976D2;
       color: #fff;
       text-align: center;
@@ -37,7 +43,59 @@
       font-size: 1.25rem;
       font-weight: 700;
       letter-spacing: 0.05em;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* 헤더 우측 버전 표시 */
+    .app-version {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: rgba(255,255,255,0.75);
+    }
+
+    /* 설정 바 */
+    .settings-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 8px 16px;
+      background: #fff;
+      border-bottom: 1px solid #E0E0E0;
+    }
+
+    .settings-bar label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #616161;
+    }
+
+    #weeksSelect {
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: #212121;
+      background: #F5F5F5;
+      border: 1px solid #BDBDBD;
+      border-radius: 6px;
+      padding: 6px 30px 6px 12px;
+      min-height: 36px;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23616161' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 9px center;
+      background-size: 14px 14px;
+    }
+
+    #weeksSelect:focus {
+      outline: none;
+      border-color: #1976D2;
+      box-shadow: 0 0 0 2px rgba(25,118,210,0.2);
     }
 
     main {
@@ -154,7 +212,17 @@
   </style>
 </head>
 <body>
-  <header>DayPick</header>
+  <div class="top-bar">
+    <header>
+      DayPick
+      <span class="app-version" id="appVersion"></span>
+    </header>
+
+    <div class="settings-bar">
+      <label for="weeksSelect">표시 기간</label>
+      <select id="weeksSelect" aria-label="표시할 주간 수"></select>
+    </div>
+  </div>
 
   <main>
     <ul class="date-list" id="dateList"></ul>
@@ -164,7 +232,55 @@
 
   <script>
     (function () {
+      // 앱 버전 (09_ChangeVersionName.py 가 이 값을 변경합니다)
+      const APP_VERSION = '1.0.1';
+
       const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+      // 표시 기간 설정
+      const STORAGE_KEY = 'daypick.weeks';   // localStorage 키
+      const DEFAULT_WEEKS = 2;               // 기본값: 2주
+      const WEEK_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
+
+      /**
+       * 주간 수 -> 표시할 날짜 개수 (오늘 포함)
+       * 예: 2주 -> 14일 전까지 + 오늘 = 15개
+       * @param {number} weeks
+       * @returns {number}
+       */
+      function weeksToDayCount(weeks) {
+        return weeks * 7 + 1;
+      }
+
+      /**
+       * localStorage 에서 저장된 주간 수를 읽음.
+       * 값이 없거나 허용 목록에 없으면 기본값 반환.
+       * @returns {number}
+       */
+      function loadWeeks() {
+        try {
+          const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+          if (WEEK_OPTIONS.indexOf(saved) !== -1) {
+            return saved;
+          }
+        } catch (err) {
+          // 시크릿 모드 등 localStorage 사용 불가 - 기본값 사용
+          console.warn('설정 불러오기 실패:', err);
+        }
+        return DEFAULT_WEEKS;
+      }
+
+      /**
+       * 주간 수를 localStorage 에 저장
+       * @param {number} weeks
+       */
+      function saveWeeks(weeks) {
+        try {
+          localStorage.setItem(STORAGE_KEY, String(weeks));
+        } catch (err) {
+          console.warn('설정 저장 실패:', err);
+        }
+      }
 
       /**
        * 날짜를 "2026-03-19(목)" 형식 문자열로 변환
@@ -180,14 +296,20 @@
       }
 
       /**
-       * 날짜 목록 렌더링 (오늘 포함 14일 전까지, 총 15개)
+       * 날짜 목록 렌더링 (오늘 포함, weeks 주 전까지)
+       * @param {number} weeks - 표시할 주간 수
        */
-      function renderDates() {
+      function renderDates(weeks) {
         const list = document.getElementById('dateList');
+        const count = weeksToDayCount(weeks);
+
+        // 기존 목록 비우기 (설정 변경 시 재렌더링)
+        list.innerHTML = '';
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < count; i++) {
           const d = new Date(today);
           d.setDate(today.getDate() - i);
 
@@ -250,6 +372,30 @@
         }
       }
 
+      /**
+       * 설정 바(주간 수 드롭다운) 초기화
+       * @param {number} weeks - 현재 설정값
+       */
+      function initSettings(weeks) {
+        const select = document.getElementById('weeksSelect');
+
+        WEEK_OPTIONS.forEach(function (w) {
+          const opt = document.createElement('option');
+          opt.value = String(w);
+          opt.textContent = `${w}주 (${weeksToDayCount(w)}일)`;
+          select.appendChild(opt);
+        });
+
+        select.value = String(weeks);
+
+        select.addEventListener('change', function () {
+          const w = parseInt(select.value, 10);
+          saveWeeks(w);
+          renderDates(w);
+          showToast(`최근 ${w}주 (${weeksToDayCount(w)}일) 표시`);
+        });
+      }
+
       // 토스트 타이머
       let toastTimer = null;
 
@@ -309,8 +455,12 @@
         });
       }
 
-      // 초기 렌더링
-      renderDates();
+      // 초기화
+      document.getElementById('appVersion').textContent = 'v' + APP_VERSION;
+
+      const currentWeeks = loadWeeks();
+      initSettings(currentWeeks);
+      renderDates(currentWeeks);
     })();
   </script>
 </body>
