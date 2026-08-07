@@ -752,6 +752,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   <symbol id="i-install" viewBox="0 0 24 24"><rect x="6.5" y="2.8" width="11" height="18.4" rx="2.4"/><path d="M12 7.5v6.5M9.4 11.4 12 14l2.6-2.6"/></symbol>
   <symbol id="i-share-ios" viewBox="0 0 24 24"><path d="M12 3.4v10M8.6 6.8 12 3.4l3.4 3.4"/><path d="M7 10.5H5.6A1.6 1.6 0 0 0 4 12.1v7.3a1.6 1.6 0 0 0 1.6 1.6h12.8a1.6 1.6 0 0 0 1.6-1.6v-7.3a1.6 1.6 0 0 0-1.6-1.6H17"/></symbol>
   <symbol id="i-undo" viewBox="0 0 24 24"><path d="M4 9h10.5A5.5 5.5 0 1 1 14.5 20H8"/><path d="M7.6 5.2 3.8 9l3.8 3.8"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 24 24"><path d="M3.5 6.2h9M3.5 12h6M3.5 17.8h3.5"/><path d="M17.5 4.6v14.8M14.2 16.1l3.3 3.3 3.3-3.3"/></symbol>
 </defs>
 </svg>
 
@@ -840,6 +841,10 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 
 <!-- 오버플로 메뉴 -->
 <div class="menu" id="menu" role="menu" aria-label="추가 기능" hidden>
+  <button type="button" role="menuitem" id="miSort">
+    <svg class="ic" aria-hidden="true"><use href="#i-sort"/></svg><span>가나다순 정렬</span>
+  </button>
+  <hr>
   <button type="button" role="menuitem" id="miExport">
     <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>JSON 내보내기</span>
   </button>
@@ -915,7 +920,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.0.0';
+  var APP_VERSION = '1.0.1';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 1;
@@ -1017,6 +1022,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     search: $('search'),
     btnSearchClear: $('btnSearchClear'),
     menu: $('menu'),
+    miSort: $('miSort'),
     miExport: $('miExport'),
     miImport: $('miImport'),
     miClear: $('miClear'),
@@ -1665,6 +1671,112 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   }
 
   /* ==========================================================
+     9-1. 순서 변경 — 내용 기준 정렬 (가나다 · 알파벳)
+     ========================================================== */
+  /**
+   * 한글·영문·숫자를 사람이 기대하는 순서로 비교한다.
+   * numeric: '항목 2' 가 '항목 10' 보다 앞. sensitivity 'base': 대소문자 무시.
+   * Intl 미지원 환경에서는 소문자 단순 비교로 폴백한다.
+   */
+  var collator = (function () {
+    try {
+      if (window.Intl && typeof Intl.Collator === 'function') {
+        return new Intl.Collator(['ko', 'en'], { numeric: true, sensitivity: 'base' });
+      }
+    } catch (e) { /* 폴백으로 진행 */ }
+    return null;
+  })();
+
+  /** 정렬 키 — 앞뒤 공백과 줄바꿈을 무시하고 첫 줄부터 비교되게 한다 */
+  function sortKey(it) { return String(it.text).replace(/\s+/g, ' ').trim(); }
+
+  function compareText(a, b) {
+    var x = sortKey(a), y = sortKey(b);
+    if (collator) return collator.compare(x, y);
+    x = x.toLowerCase();
+    y = y.toLowerCase();
+    return x < y ? -1 : (x > y ? 1 : 0);
+  }
+
+  /** 메뉴 → 가나다순 정렬. 방향을 물은 뒤 실행 취소 1회분을 제공한다 */
+  function sortItems() {
+    if (state.items.length < 2) {
+      toast('정렬하려면 문구가 2개 이상 필요합니다', { duration: 2200 });
+      return;
+    }
+    if (isFiltered()) {                               // 순서 변경은 검색 중 비활성 (▲▼·드래그와 동일)
+      toast('순서를 바꾸려면 검색을 지우세요.', { duration: 2600 });
+      return;
+    }
+    ask({
+      title: '가나다순 정렬',
+      body: '문구 ' + state.items.length + '개를 내용의 첫 글자부터 사전 순으로 다시 정렬합니다. ' +
+            '대소문자는 구분하지 않으며, 숫자는 크기 순으로 비교합니다.',
+      buttons: [
+        { label: '취소', value: null, grow: true },
+        { label: '내림차순 (ㅎ→ㄱ)', value: 'desc' },
+        { label: '오름차순 (ㄱ→ㅎ)', value: 'asc', kind: 'primary' }
+      ]
+    }).then(function (dir) {
+      if (dir) applySort(dir);
+    });
+  }
+
+  function applySort(dir) {
+    var snapshot = state.items.slice();                // 실행 취소 1회분
+    var sign = dir === 'desc' ? -1 : 1;
+
+    // 값이 같은 항목은 원래 순서를 유지하도록 인덱스를 보조 키로 쓴다(안정 정렬)
+    var decorated = state.items.map(function (it, i) { return { it: it, i: i }; });
+    decorated.sort(function (a, b) {
+      var d = compareText(a.it, b.it) * sign;
+      return d !== 0 ? d : a.i - b.i;
+    });
+    var sorted = decorated.map(function (d) { return d.it; });
+
+    var changed = false;
+    for (var i = 0; i < sorted.length; i++) {
+      if (sorted[i] !== snapshot[i]) { changed = true; break; }
+    }
+    if (!changed) {
+      toast('이미 정렬된 상태입니다', { duration: 2200 });
+      return;
+    }
+
+    // FLIP 측정 전에 스크롤을 끝내야 이동 애니메이션이 어긋나지 않는다
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    flip(function () {
+      setState(function (items) {
+        items.length = 0;
+        for (var j = 0; j < sorted.length; j++) items.push(sorted[j]);
+      });
+    });
+
+    commitPendingUndo();
+    var t = toast(dir === 'desc' ? '내림차순으로 정렬했습니다' : '오름차순으로 정렬했습니다', {
+      kind: 'ok',
+      duration: 8000,
+      action: {
+        label: '실행 취소',
+        icon: 'undo',
+        onClick: function () {
+          pendingUndo = null;
+          window.scrollTo({ top: 0, behavior: 'auto' });
+          flip(function () {
+            setState(function (items) {
+              items.length = 0;
+              for (var k = 0; k < snapshot.length; k++) items.push(snapshot[k]);
+            });
+          });
+          toast('정렬 전 순서로 되돌렸습니다', { duration: 2000 });
+        }
+      },
+      onExpire: function () { pendingUndo = null; }
+    });
+    pendingUndo = { toast: t };
+  }
+
+  /* ==========================================================
      10. 순서 변경 — Pointer Events 드래그
      ========================================================== */
   var drag = null;
@@ -2160,6 +2272,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   E.aboutClose.addEventListener('click', function () { closeScrim(E.aboutScrim); });
   E.manualClose.addEventListener('click', function () { closeScrim(E.manualScrim); });
 
+  E.miSort.addEventListener('click', function () { closeMenu(false); sortItems(); });
   E.miExport.addEventListener('click', function () { closeMenu(false); exportJson(); });
   E.miImport.addEventListener('click', function () { closeMenu(false); importJson(); });
   E.miClear.addEventListener('click', function () { closeMenu(false); clearAll(); });

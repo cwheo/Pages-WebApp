@@ -3,7 +3,7 @@
   "name": "QuickCopy",
   "short_name": "QuickCopy",
   "description": "자주 쓰는 문구를 저장하고 한 번에 복사하는 앱",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
