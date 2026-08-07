@@ -8,7 +8,7 @@
  */
 'use strict';
 
-var CACHE_NAME = 'quickcopy-v1.0.1';
+var CACHE_NAME = 'quickcopy-v1.0.2';
 
 /* 앱 셸 — 외부 리소스는 하나도 없다 (오프라인 100% 동작) */
 var SHELL = [
