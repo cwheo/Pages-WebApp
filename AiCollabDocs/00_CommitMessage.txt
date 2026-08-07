@@ -1,7 +1,0 @@
-DayPick v1.0.1 Add version display and configurable date range
-- 헤더 우측에 앱 버전(v1.0.1) 표시, sw.js 캐시명을 버전과 동기화
-- 표시 기간 드롭다운 추가 (1/2/3/4/6/8/12주), localStorage에 설정 저장
-- 저장소 예외 및 허용 목록 밖 값은 기본 2주로 폴백 처리
-- DayPick 폴더 3중 중첩 구조로 재편 (루트/작업/배포 대상)
-- 09_ChangeVersionName.py 추가: index.html/sw.js/manifest.json 버전 일괄 변경
-- 저장소 바로가기 bat 2종 추가 (로컬 배포 폴더, GitHub 웹 페이지)
