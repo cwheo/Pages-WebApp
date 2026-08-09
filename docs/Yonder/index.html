@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      viewport-fit=cover — 노치 기기에서 화면 전체를 쓰고 safe-area 로 여백을 준다.
+      user-scalable=no — 주행 중 의도치 않은 확대를 막는다.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>여긴어디</title>
+    <meta name="description" content="현재 위치의 행정구역을 알려주는 앱" />
+
+    <!-- ThemeService가 실제 테마에 맞춰 값을 갱신한다. (§9.2) -->
+    <meta name="theme-color" content="#0E1116" />
+    <meta name="color-scheme" content="dark light" />
+
+    <!-- PWA (§8.1). 상대 경로 — GitHub Pages 하위 경로 대응 (§3.3) -->
+    <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- iOS 홈 화면 (§8.2). iOS는 maskable을 지원하지 않아 별도 아이콘이 필요하다. -->
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="여긴어디" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link rel="icon" href="favicon.ico" sizes="32x32" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+
+    <!--
+      첫 페인트 전에 배경색을 확정해 흰 화면 번쩍임을 막는다.
+      야간 주행 중 눈부심 방지 목적이라 인라인으로 둔다. (§7.4)
+    -->
+    <style>
+      :root {
+        color-scheme: dark light;
+      }
+      html {
+        background: #0e1116;
+      }
+      @media (prefers-color-scheme: light) {
+        html:not([data-theme='dark']) {
+          background: #f7f9fb;
+        }
+      }
+      html[data-theme='light'] {
+        background: #f7f9fb;
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/index-DqxGcgtz.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DpaurmhB.css">
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <h1 class="topbar__title">여긴어디</h1>
+        <button
+          type="button"
+          class="icon-button"
+          data-el="theme-toggle"
+          aria-label="밝게/어둡게 전환"
+          title="밝게/어둡게 전환"
+        >
+          ☾
+        </button>
+      </header>
+
+      <main class="views">
+        <section class="view" id="view-main" aria-label="현재 위치"></section>
+        <section class="view" id="view-history" aria-label="이동 이력" hidden></section>
+        <section class="view" id="view-settings" aria-label="설정" hidden></section>
+      </main>
+
+      <nav class="tabbar" aria-label="화면 이동">
+        <button type="button" class="tabbar__button" data-view="main" aria-selected="true">
+          현재위치
+        </button>
+        <button type="button" class="tabbar__button" data-view="history" aria-selected="false">
+          이력
+        </button>
+        <button type="button" class="tabbar__button" data-view="settings" aria-selected="false">
+          설정
+        </button>
+      </nav>
+    </div>
+
+  </body>
+</html>

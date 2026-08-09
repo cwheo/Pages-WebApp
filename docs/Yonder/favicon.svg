@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="여긴어디">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#141A22"/>
+      <stop offset="100%" stop-color="#0E1116"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="96" ry="96" fill="url(#sky)"/>
+
+  <g transform="translate(0.00 0.00) scale(1)">
+    <!--
+      능선은 캔버스 밖까지 늘려 둔다. maskable 변형에서 그림을 안전 영역으로
+      줄여도 능선이 여전히 아래·좌우 가장자리까지 차서, 잘린 사각형처럼 뜨지 않는다.
+    -->
+    <!-- 뒤쪽 능선 — 밝은 회청색 -->
+    <path d="M-260 372 L104 258 L196 336 L292 244 L404 350 L772 296 L772 900 L-260 900 Z"
+          fill="#2C3A4A"/>
+    <!-- 앞쪽 능선 — 어두운 회청색 -->
+    <path d="M-260 438 L92 356 L182 420 L300 334 L422 424 L772 386 L772 900 L-260 900 Z"
+          fill="#1B2530"/>
+    <!-- 위치 핀 -->
+    <path d="M256 316 C232 268 194 228 194 188 A62 62 0 1 1 318 188 C318 228 280 268 256 316 Z"
+          fill="#4CC2A6"/>
+    <circle cx="256" cy="188" r="25" fill="#0E1116"/>
+  </g>
+</svg>
