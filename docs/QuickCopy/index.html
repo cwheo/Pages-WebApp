@@ -447,9 +447,33 @@ html[data-theme="dark"] .chip[aria-selected="true"] .cnt { background: rgba(0, 0
 .body:hover { background: color-mix(in srgb, var(--accent-weak) 60%, transparent); }
 .body:active { background: var(--accent-weak); }
 
-.text {
+/* 본문 세로 묶음 — 원문 + 치환 미리보기 */
+.bodycol {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 치환 변수가 있는 문구에만 붙는 결과 미리보기 한 줄 */
+.subst {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subst[hidden] { display: none; }
+.subst .arrow { flex: 0 0 auto; color: var(--accent); font-weight: 700; }
+.subst .out { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.text {
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -700,6 +724,74 @@ html[data-theme="dark"] .fab { color: #10131a; box-shadow: 0 8px 22px rgba(0, 0,
 .sheet input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
 .sheet .meta .err { color: var(--danger); font-weight: 600; }
 
+/* 편집 모달 — 치환 결과 미리보기 · 안내 줄 */
+.substpv {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 10px 0 0 !important;
+  padding: 9px 12px;
+  background: var(--accent-weak);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px !important;
+  color: var(--accent) !important;
+  overflow: hidden;
+}
+.substpv[hidden] { display: none; }
+.substpv .lead { flex: 0 0 auto; font-weight: 700; opacity: .85; }
+.substpv .out {
+  min-width: 0;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.substtip {
+  display: flex; align-items: center; gap: 7px;
+  margin: 10px 0 0 !important;
+  font-size: 12.5px !important;
+  line-height: 1.5;
+}
+.substtip[hidden] { display: none; }
+.substtip .ic { flex: 0 0 auto; width: 16px; height: 16px; }
+.substtip .linkbtn {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 30px;
+  padding: 0 10px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  border: 0; border-radius: 8px;
+  font-size: 12.5px; font-weight: 700;
+  white-space: nowrap;
+}
+.substtip .linkbtn:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+
+/* 치환 변수 안내 페이지 */
+.sheet .subhd {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: .02em;
+}
+.sheet .rows dd { font-variant-numeric: tabular-nums; word-break: break-word; }
+/* 기호 자체는 고정폭으로 — 대소문자(MM/mm) 차이가 눈에 들어와야 한다 */
+.sheet .rows dt.tok {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.sheet .fine {
+  margin: 14px 0 0 !important;
+  font-size: 12.5px !important;
+  line-height: 1.65;
+}
+ul.fine { padding-left: 18px; color: var(--text-muted); }
+ul.fine li { margin: 0 0 4px; }
+ul.fine b, .sheet .fine b { color: var(--text); font-weight: 700; }
+
 /* 시트 안의 선택 필드 (문구의 그룹) */
 .field {
   display: flex; align-items: center; gap: 10px;
@@ -888,6 +980,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.8 3.6h10.4v16.8L12 16.4l-5.2 4z"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.6 6.6a1.8 1.8 0 0 1 1.8-1.8h3.4l1.9 2.4h7.9a1.8 1.8 0 0 1 1.8 1.8v8.6a1.8 1.8 0 0 1-1.8 1.8H5.4a1.8 1.8 0 0 1-1.8-1.8z"/></symbol>
   <symbol id="i-sort" viewBox="0 0 24 24"><path d="M3.5 6.2h9M3.5 12h6M3.5 17.8h3.5"/><path d="M17.5 4.6v14.8M14.2 16.1l3.3 3.3 3.3-3.3"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.4 2"/></symbol>
 </defs>
 </svg>
 
@@ -1017,6 +1110,9 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><span>전체 삭제</span>
   </button>
   <hr>
+  <button type="button" role="menuitem" id="miTokens">
+    <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><span>치환 변수 (날짜·시각)</span>
+  </button>
   <button type="button" role="menuitem" id="miAbout">
     <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><span>앱 정보</span>
   </button>
@@ -1031,6 +1127,16 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
       <span id="editCount">0자</span>
       <span id="editTip">Ctrl+Enter 저장 · Esc 취소</span>
     </div>
+    <!-- 치환 변수가 들어 있으면 지금 복사했을 때의 결과를 그대로 보여준다 -->
+    <p class="substpv" id="editPreview" hidden>
+      <span class="lead">지금 복사하면</span>
+      <span class="out" id="editPreviewOut"></span>
+    </p>
+    <p class="substtip" id="editTokensTip">
+      <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>
+      <span><b>{yyyy-MM-dd}</b> 처럼 넣으면 복사할 때 현재 일시로 바뀝니다.</span>
+      <button type="button" class="linkbtn" id="editTokens">기호 보기</button>
+    </p>
     <!-- 그룹 선택 — 그룹이 하나라도 있을 때만 보인다 -->
     <div class="field" id="editGroupField" hidden>
       <label for="editGroup">그룹</label>
@@ -1080,6 +1186,34 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   </div>
 </div>
 
+<!-- 치환 변수 안내 -->
+<div class="scrim" id="tokensScrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="tokensTitle">
+    <h2 id="tokensTitle">치환 변수 — 날짜·시각</h2>
+    <p>문구 안에 <b>{ }</b> 로 감싼 기호를 넣어 두면, <b>복사하는 순간</b> 현재 일시로 바뀝니다.
+      저장된 문구는 그대로 남으므로 몇 번이고 다시 쓸 수 있습니다.</p>
+
+    <h3 class="subhd">자주 쓰는 예</h3>
+    <div class="rows"><dl id="tokenEx"></dl></div>
+
+    <h3 class="subhd">기호</h3>
+    <div class="rows"><dl id="tokenList"></dl></div>
+
+    <p class="fine" id="tokenNow"></p>
+    <ul class="fine">
+      <li>기호가 아닌 글자(<b>-</b> <b>_</b> <b>:</b> <b>( )</b> 공백·한글)는 그대로 남습니다.</li>
+      <li>대소문자를 가립니다 — <b>MM</b> 은 월, <b>mm</b> 은 분입니다.
+        다만 <b>{yyyyMMdd_HHMM}</b> 처럼 대문자로 몰아 써도 뒤쪽 <b>MM</b> 은 분으로 알아서 읽습니다.</li>
+      <li>중괄호를 글자 그대로 쓰려면 <b>{{</b> · <b>}}</b> 처럼 두 번 씁니다.</li>
+      <li><b>{메모}</b> 처럼 아는 기호가 하나도 없는 중괄호는 바뀌지 않고 그대로 복사됩니다.</li>
+    </ul>
+
+    <div class="btnrow">
+      <button type="button" class="btn primary" id="tokensClose">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 앱 정보 -->
 <div class="scrim" id="aboutScrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
@@ -1114,7 +1248,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.0.2';
+  var APP_VERSION = '1.1.0';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 2;                 // 2 = groups 추가 (1 은 그룹 없음 → 전부 미분류로 승격)
@@ -1247,6 +1381,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     miExport: $('miExport'),
     miImport: $('miImport'),
     miClear: $('miClear'),
+    miTokens: $('miTokens'),
     miAbout: $('miAbout'),
     importFile: $('importFile'),
     editScrim: $('editScrim'),
@@ -1257,6 +1392,15 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     editSave: $('editSave'),
     editGroupField: $('editGroupField'),
     editGroup: $('editGroup'),
+    editPreview: $('editPreview'),
+    editPreviewOut: $('editPreviewOut'),
+    editTokensTip: $('editTokensTip'),
+    editTokens: $('editTokens'),
+    tokensScrim: $('tokensScrim'),
+    tokenEx: $('tokenEx'),
+    tokenList: $('tokenList'),
+    tokenNow: $('tokenNow'),
+    tokensClose: $('tokensClose'),
     groupScrim: $('groupScrim'),
     groupRows: $('groupRows'),
     groupNone: $('groupNone'),
@@ -1676,6 +1820,75 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   }
 
   /* ==========================================================
+     5-1. 치환 변수 — 복사 시점에 현재 일시로 바꾼다
+     ==========================================================
+     표기는 .NET(Windows) 커스텀 날짜 서식 관례를 따른다.
+       {yyyyMMdd_HHmm}  {yyyy-MM-dd(ddd)}  {HH:mm}  {tt hh:mm}
+     저장된 문구(item.text)는 절대 건드리지 않는다 — 복사본만 치환한다.
+     ========================================================== */
+  var WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+  /** 긴 기호를 먼저 — dddd 를 ddd·dd 보다 앞에 두어야 한다 */
+  var TOKEN_RE = /dddd|ddd|yyyy|YYYY|yy|YY|MM|dd|DD|HH|hh|mm|ss|tt/g;
+
+  /**
+   * 한 덩어리의 서식 문자열을 실제 값으로 바꾼다. 기호가 아닌 글자는 그대로 남는다.
+   * ⚠ MM 은 원칙적으로 '월' 이지만, 패턴에 소문자 mm(분)이 하나도 없고
+   *   시(HH/hh) 뒤에 오는 MM 이라면 '분' 으로 읽는다.
+   *   {yyyyMMdd_HHMM} 처럼 대문자로 몰아 쓰는 습관이 조용히 틀린 값을 만들지 않도록 한 보정이다.
+   *   mm 이 이미 쓰였으면 이 보정은 꺼지므로 {HH:mm MM월} 도 정상 동작한다.
+   */
+  function formatDate(fmt, d) {
+    var rescueMM = fmt.indexOf('mm') < 0;
+    var afterHour = false;
+    return fmt.replace(TOKEN_RE, function (t) {
+      switch (t) {
+        case 'yyyy': case 'YYYY': return String(d.getFullYear());
+        case 'yy':   case 'YY':   return pad2(d.getFullYear() % 100);
+        case 'MM':   return (rescueMM && afterHour) ? pad2(d.getMinutes()) : pad2(d.getMonth() + 1);
+        case 'dd':   case 'DD':   return pad2(d.getDate());
+        case 'ddd':  return WEEK[d.getDay()];
+        case 'dddd': return WEEK[d.getDay()] + '요일';
+        case 'HH':   afterHour = true; return pad2(d.getHours());
+        case 'hh':   afterHour = true; return pad2(d.getHours() % 12 || 12);
+        case 'mm':   return pad2(d.getMinutes());
+        case 'ss':   return pad2(d.getSeconds());
+        case 'tt':   return d.getHours() < 12 ? '오전' : '오후';
+      }
+      return t;
+    });
+  }
+
+  /**
+   * 문구 안의 {…} 를 현재 일시로 치환한다.
+   * - 한 번의 호출은 같은 시각을 공유한다 (초 경계에서 값이 어긋나지 않게)
+   * - {{ · }} 는 중괄호 글자 자체
+   * - 아는 기호가 하나도 없는 중괄호({메모} 등)는 손대지 않는다 — 기존 문구 보호
+   */
+  function expandTokens(text, d) {
+    var s = String(text);
+    if (s.indexOf('{') < 0) return s;          // 대부분의 문구는 여기서 즉시 빠져나간다
+    var now = d || new Date();
+    return s.replace(/\{\{|\}\}|\{([^{}]*)\}/g, function (m, body) {
+      if (m === '{{') return '{';
+      if (m === '}}') return '}';
+      var out = formatDate(body, now);
+      return out === body ? m : out;
+    });
+  }
+
+  /** 치환 결과가 원문과 다르면 그 결과를, 같으면 null (미리보기 표시 여부 판단) */
+  function substOf(text, d) {
+    var out = expandTokens(text, d);
+    return out === String(text) ? null : out;
+  }
+
+  /** 미리보기·토스트용 한 줄 요약 */
+  function clip(s, n) {
+    var t = String(s).replace(/\s+/g, ' ').trim();
+    return t.length > n ? t.slice(0, n) + '…' : t;
+  }
+
+  /* ==========================================================
      6. 클립보드 복사 (3단계 폴백)
      ========================================================== */
   /** 2단계: 화면 밖 textarea + execCommand */
@@ -1704,8 +1917,10 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     try { E.manualText.select(); } catch (e) { /* 무시 */ }
   }
 
-  function copySucceeded(id) {
-    toast('복사되었습니다', { kind: 'ok', duration: 1600 });
+  /** shown 이 있으면(치환된 문구) 실제로 복사된 값을 토스트에 보여준다 */
+  function copySucceeded(id, shown) {
+    if (shown) toast('복사: ' + clip(shown, 34), { kind: 'ok', duration: 2400 });
+    else toast('복사되었습니다', { kind: 'ok', duration: 1600 });
     try { if (navigator.vibrate) navigator.vibrate(15); } catch (e) { /* 무시 */ }
     if (id) flash(id, 'flash', 620);
   }
@@ -1713,7 +1928,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /**
    * 복사 실행. 반드시 사용자 제스처 핸들러 안에서 동기적으로 호출해야 한다.
    */
-  function copyText(text, id) {
+  function copyText(text, id, shown) {
     var p = null;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) p = navigator.clipboard.writeText(text);
@@ -1721,21 +1936,23 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 
     if (p && typeof p.then === 'function') {
       p.then(function () {
-        copySucceeded(id);
+        copySucceeded(id, shown);
       }, function () {
-        if (legacyCopy(text)) copySucceeded(id);
+        if (legacyCopy(text)) copySucceeded(id, shown);
         else manualCopy(text);
       });
       return;
     }
-    if (legacyCopy(text)) copySucceeded(id);
+    if (legacyCopy(text)) copySucceeded(id, shown);
     else manualCopy(text);
   }
 
   function copyItem(id) {
     var it = itemById(id);
     if (!it) return;
-    copyText(it.text, id);
+    // 치환은 여기 한 곳에서만 — 3단계 폴백 전부가 치환된 문구를 쓴다
+    var out = expandTokens(it.text);
+    copyText(out, id, out === it.text ? null : out);
   }
 
   /** 카드에 임시 강조 클래스를 붙인다 */
@@ -1788,11 +2005,19 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     handle.addEventListener('pointerdown', function (ev) { onHandleDown(ev, li); });
     li.appendChild(handle);
 
-    // 본문 (복사 버튼)
+    // 본문 (복사 버튼) — 원문 아래에 치환 결과 미리보기 줄이 붙는다
     var body = el('button', 'body');
     body.type = 'button';
+    var col = el('span', 'bodycol');
     var text = el('span', 'text');
-    body.appendChild(text);
+    var subst = el('span', 'subst');
+    subst.hidden = true;
+    subst.appendChild(el('span', 'arrow', '→'));
+    var substOut = el('span', 'out');
+    subst.appendChild(substOut);
+    col.appendChild(text);
+    col.appendChild(subst);
+    body.appendChild(col);
     body.appendChild(ic('copy', 'copyhint'));
     body.addEventListener('click', function () { copyItem(li.getAttribute('data-id')); });
     li.appendChild(body);
@@ -1831,20 +2056,41 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     acts.appendChild(del);
     li.appendChild(acts);
 
-    li._parts = { text: text, body: body, up: up, down: down };
+    li._parts = { text: text, subst: subst, substOut: substOut, body: body, up: up, down: down };
     return li;
+  }
+
+  /**
+   * 치환 미리보기 한 줄을 갱신한다 (치환 변수가 없는 문구에는 아무것도 붙지 않는다).
+   * 시간이 흐르면 값이 낡으므로 목록 갱신 때뿐 아니라 주기적으로도 호출된다.
+   */
+  function paintSubst(node, item, d) {
+    var p = node._parts;
+    var out = substOf(item.text, d);
+    if (node._subst === out) return;
+    node._subst = out;
+
+    if (out == null) {
+      p.subst.hidden = true;
+      p.substOut.textContent = '';
+      p.body.setAttribute('aria-label', '복사: ' + clip(item.text, 42));
+    } else {
+      p.substOut.textContent = clip(out, 60);
+      p.subst.hidden = false;
+      // 스크린 리더에는 실제로 복사될 값을 읽어 준다
+      p.body.setAttribute('aria-label', '복사: ' + clip(out, 42) + ' (날짜·시각 치환됨)');
+    }
   }
 
   function updateCard(node, item, pos, total, filtered) {
     var p = node._parts;
     if (node._text !== item.text) {
       p.text.textContent = item.text;         // 사용자 입력은 항상 textContent
-      var short = item.text.replace(/\s+/g, ' ').trim();
-      if (short.length > 42) short = short.slice(0, 42) + '…';
-      p.body.setAttribute('aria-label', '복사: ' + short);
       p.body.setAttribute('title', '눌러서 복사');
       node._text = item.text;
+      node._subst = undefined;                // 문구가 바뀌었으니 미리보기도 다시 계산
     }
+    paintSubst(node, item);
     if (node.getAttribute('data-id') !== item.id) node.setAttribute('data-id', item.id);
 
     var upDis = filtered || pos === 0;
@@ -1852,6 +2098,26 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     if (p.up.disabled !== upDis) p.up.disabled = upDis;
     if (p.down.disabled !== downDis) p.down.disabled = downDis;
   }
+
+  /**
+   * 화면에 떠 있는 치환 미리보기를 현재 시각으로 다시 맞춘다.
+   * 분이 넘어갔는데 카드에 옛 값이 남아 있으면 미리보기를 믿을 수 없게 된다.
+   * 화면이 가려져 있거나 드래그 중이면 건너뛴다.
+   */
+  function refreshSubstPreviews() {
+    if (document.hidden || drag) return;
+    if (!E.editScrim.hidden) syncEditState();   // 편집 모달의 미리보기도 같이 맞춘다
+    var d = new Date();
+    var vis = visibleItems();
+    for (var i = 0; i < vis.length; i++) {
+      var node = nodeById[vis[i].id];
+      if (node && node._parts) paintSubst(node, vis[i], d);
+    }
+  }
+  setInterval(refreshSubstPreviews, 15000);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) refreshSubstPreviews();
+  });
 
   /**
    * 그룹 칩 바 — [전체] [그룹…] [미분류] [＋]
@@ -2065,7 +2331,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 
   function anyScrimOpen() {
     return !E.editScrim.hidden || !E.askScrim.hidden || !E.aboutScrim.hidden ||
-           !E.manualScrim.hidden || !E.groupScrim.hidden || !E.promptScrim.hidden;
+           !E.manualScrim.hidden || !E.groupScrim.hidden || !E.promptScrim.hidden ||
+           !E.tokensScrim.hidden;
   }
 
   /** 겹쳐 열렸을 때 위에 있는 것 — Esc·Tab 트랩·배경 클릭이 이것을 대상으로 한다 */
@@ -2073,6 +2340,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     if (!E.manualScrim.hidden) return E.manualScrim;
     if (!E.promptScrim.hidden) return E.promptScrim;      // 그룹 관리 위에 열린다
     if (!E.askScrim.hidden) return E.askScrim;
+    if (!E.tokensScrim.hidden) return E.tokensScrim;      // 편집 모달 위에 열린다
     if (!E.groupScrim.hidden) return E.groupScrim;
     if (!E.editScrim.hidden) return E.editScrim;
     if (!E.aboutScrim.hidden) return E.aboutScrim;
@@ -2083,6 +2351,12 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     var v = E.editText.value;
     E.editSave.disabled = v.trim().length === 0;
     E.editCount.textContent = v.length + '자';
+
+    // 치환 변수가 들어 있으면 지금 복사했을 때의 결과를 그대로 보여준다
+    // 안내 줄(기호 보기 버튼)은 항상 남겨 둔다 — 편집 중에 표를 열 수 있어야 한다
+    var out = substOf(v);
+    E.editPreview.hidden = out == null;
+    E.editPreviewOut.textContent = out == null ? '' : out;
   }
 
   /** 모달의 그룹 선택 목록을 채운다. 그룹이 없으면 필드 자체를 숨긴다 */
@@ -3096,6 +3370,57 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   }
 
   /* ==========================================================
+     14-1. 치환 변수 안내
+     ==========================================================
+     표의 '결과' 칸은 열 때의 실제 현재 일시로 채운다.
+     설명만 읽는 것보다, 지금 값이 그대로 보이는 편이 훨씬 빨리 이해된다.
+     ========================================================== */
+  var TOKEN_EXAMPLES = [
+    '{yyyyMMdd_HHmm}',
+    '{yyyy-MM-dd}',
+    '{yyyy-MM-dd(ddd)}',
+    '{HH:mm}',
+    '{tt hh:mm}',
+    '{yyyy년 MM월 dd일 dddd}'
+  ];
+  var TOKEN_DEFS = [
+    ['yyyy', '연도 4자리'],
+    ['yy',   '연도 2자리'],
+    ['MM',   '월'],
+    ['dd',   '일'],
+    ['ddd',  '요일'],
+    ['dddd', '요일 (긴 형태)'],
+    ['HH',   '시 (24시간)'],
+    ['hh',   '시 (12시간)'],
+    ['mm',   '분'],
+    ['ss',   '초'],
+    ['tt',   '오전 / 오후']
+  ];
+
+  function openTokens() {
+    var d = new Date();
+
+    function fill(dl, rows) {
+      while (dl.firstChild) dl.removeChild(dl.firstChild);
+      rows.forEach(function (r) {
+        var dt = el('dt', 'tok', r[0]);
+        dl.appendChild(dt);
+        dl.appendChild(el('dd', null, r[1]));
+      });
+    }
+
+    fill(E.tokenEx, TOKEN_EXAMPLES.map(function (ex) {
+      return [ex, expandTokens(ex, d)];
+    }));
+    fill(E.tokenList, TOKEN_DEFS.map(function (t) {
+      return [t[0], t[1] + ' — ' + formatDate(t[0], d)];
+    }));
+
+    E.tokenNow.textContent = '위 결과는 지금(' + formatDate('yyyy-MM-dd(ddd) HH:mm', d) + ') 기준입니다.';
+    openScrim(E.tokensScrim, E.tokensClose);
+  }
+
+  /* ==========================================================
      15. 앱 정보
      ========================================================== */
   function openAbout() {
@@ -3148,6 +3473,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   E.editText.addEventListener('input', syncEditState);
   E.aboutClose.addEventListener('click', function () { closeScrim(E.aboutScrim); });
   E.manualClose.addEventListener('click', function () { closeScrim(E.manualScrim); });
+  E.tokensClose.addEventListener('click', function () { closeScrim(E.tokensScrim); });
+  E.editTokens.addEventListener('click', openTokens);      // 편집 중에도 표를 열 수 있다
 
   E.miGroups.addEventListener('click', function () { closeMenu(false); openGroups(); });
   E.miSort.addEventListener('click', function () { closeMenu(false); sortItems(); });
@@ -3156,10 +3483,12 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   E.miExport.addEventListener('click', function () { closeMenu(false); exportJson(); });
   E.miImport.addEventListener('click', function () { closeMenu(false); importJson(); });
   E.miClear.addEventListener('click', function () { closeMenu(false); clearAll(); });
+  E.miTokens.addEventListener('click', function () { closeMenu(false); openTokens(); });
   E.miAbout.addEventListener('click', function () { closeMenu(false); openAbout(); });
 
   // 스크림 바깥(배경) 클릭으로 닫기
-  [E.editScrim, E.askScrim, E.aboutScrim, E.manualScrim, E.groupScrim, E.promptScrim].forEach(function (scrim) {
+  [E.editScrim, E.askScrim, E.aboutScrim, E.manualScrim, E.groupScrim, E.promptScrim,
+   E.tokensScrim].forEach(function (scrim) {
     scrim.addEventListener('pointerdown', function (ev) {
       if (ev.target !== scrim) return;
       if (scrim === E.askScrim) closeAsk(null);
@@ -3185,7 +3514,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 
     // Ctrl+Enter / Cmd+Enter — 모달 저장
     if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'Enter' || ev.keyCode === 13)) {
-      if (!E.editScrim.hidden) { ev.preventDefault(); commitEdit(); return; }
+      // 안내 표가 편집 모달 위에 떠 있으면 저장하지 않는다 (표를 먼저 닫아야 한다)
+      if (!E.editScrim.hidden && E.tokensScrim.hidden) { ev.preventDefault(); commitEdit(); return; }
     }
 
     // Esc — 모달 / 메뉴 / 검색 닫기
