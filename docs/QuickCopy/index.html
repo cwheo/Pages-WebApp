@@ -1100,7 +1100,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   </button>
   <hr>
   <button type="button" role="menuitem" id="miExport">
-    <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>JSON 내보내기</span>
+    <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>JSON 내보내기…</span>
   </button>
   <button type="button" role="menuitem" id="miImport">
     <svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg><span>JSON 가져오기</span>
@@ -1248,7 +1248,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.1.0';
+  var APP_VERSION = '1.2.0';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 2;                 // 2 = groups 추가 (1 은 그룹 없음 → 전부 미분류로 승격)
@@ -1275,7 +1275,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
    *                y 는 항목이 사라졌을 때 쓰는 픽셀 폴백
    * - group      : 마지막으로 보고 있던 그룹 ('all' | 'none' | 그룹 id)
    */
-  var pref = { theme: 'system', iosHintDone: false, keepScroll: true, scrolls: {}, group: 'all' };
+  var pref = { theme: 'system', iosHintDone: false, keepScroll: true, scrolls: {}, group: 'all', exportName: '' };
   var prefLegacyMigrated = false;    // 옛 단일 pref.scroll 을 옮겼는지
   /** 화면 상태 — group 은 'all' | 'none'(미분류) | 그룹 id */
   var ui = { query: '', searchOpen: false, group: 'all' };
@@ -1605,6 +1605,10 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
         pref.iosHintDone = !!p.iosHintDone;
         if (typeof p.keepScroll === 'boolean') pref.keepScroll = p.keepScroll;
         if (typeof p.group === 'string' && p.group) pref.group = p.group;
+        // 마지막 내보내기 파일명 — 손상된 값은 버린다(모달 기본값으로 쓰이므로)
+        if (typeof p.exportName === 'string' && p.exportName && !validateFileName(p.exportName)) {
+          pref.exportName = sanitizeFileName(p.exportName);
+        }
         // 그룹별 위치. 옛 형식(단일 pref.scroll)은 '전체' 의 위치로 승격한다
         if (p.scrolls && typeof p.scrolls === 'object' && !Array.isArray(p.scrolls)) {
           Object.keys(p.scrolls).forEach(function (k) {
@@ -3165,7 +3169,12 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      14. JSON 내보내기 / 가져오기
      ========================================================== */
-  function exportJson() {
+  var FILE_NAME_MAX = 100;                        // 확장자를 포함한 최대 길이
+  var BAD_FILE_CHARS = /[\\/:*?"<>|]/;            // OS 공통 파일명 금지 문자
+  var CTRL_CHARS = /[\u0000-\u001F\u007F]/;       // 제어문자
+
+  /** 내보낼 JSON 문자열. 파일명 모달을 열기 전에 미리 만들어 둔다 (사용자 활성화 유지) */
+  function buildExportText() {
     var payload = {
       app: 'QuickCopy',
       appVersion: APP_VERSION,
@@ -3175,23 +3184,140 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
       groups: state.groups,
       items: state.items
     };
-    var text = JSON.stringify(payload, null, 2);
-    var name = 'quickcopy-backup-' + stampLocal() + '.json';
+    return JSON.stringify(payload, null, 2);
+  }
+
+  /** 기본 파일명 — 지난번에 쓴 이름, 없으면 기존 타임스탬프 형식 */
+  function defaultExportName() {
+    return pref.exportName || ('quickcopy-backup-' + stampLocal() + '.json');
+  }
+
+  /** 공백 정리 + .json 확장자 보정. 확장자가 다르면 가져오기 필터에 걸려 되읽을 수 없다 */
+  function sanitizeFileName(v) {
+    var s = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+    if (!s) return '';
+    if (!/\.json$/i.test(s)) s += '.json';
+    return s;
+  }
+
+  /** askText 검증기 — 문자열을 돌려주면 모달이 닫히지 않고 오류만 표시된다 */
+  function validateFileName(v) {
+    var s = String(v == null ? '' : v).trim();
+    if (!s) return '파일 이름을 입력해 주세요.';
+    if (CTRL_CHARS.test(s)) return '사용할 수 없는 문자가 들어 있습니다.';
+    if (BAD_FILE_CHARS.test(s)) return '\\ / : * ? " < > | 는 파일 이름에 쓸 수 없습니다.';
+    if (/^\.+$/.test(s)) return '파일 이름을 입력해 주세요.';
+    if (sanitizeFileName(s).length > FILE_NAME_MAX) {
+      return '파일 이름이 너무 깁니다(' + FILE_NAME_MAX + '자 이내).';
+    }
+    return null;
+  }
+
+  function isAbortErr(e) { return !!e && (e.name === 'AbortError' || e.code === 20); }
+
+  /** 권한·보안 문제 — 저장 자체가 막힌 것이므로 아래 단계로 폴백한다 */
+  function isBlockedErr(e) {
+    return !!e && (e.name === 'SecurityError' || e.name === 'NotAllowedError' ||
+                   e.name === 'InvalidStateError' || e.name === 'NotSupportedError');
+  }
+
+  /** ③ 기존 방식 — Blob 을 다운로드 폴더로 */
+  function downloadBlob(text, name) {
+    var blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = el('a');
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    return { how: 'download', name: name };
+  }
+
+  /**
+   * ② Web Share → 없으면 ③ 다운로드.
+   * 안드로이드는 공유 시트에서 [드라이브에 저장] 을 골라 폴더를 지정한다.
+   */
+  function shareOrDownload(text, name) {
     try {
-      var blob = new Blob([text], { type: 'application/json;charset=utf-8' });
-      var url = URL.createObjectURL(blob);
-      var a = el('a');
-      a.href = url;
-      a.download = name;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-      toast(state.items.length + '개 문구를 내보냈습니다', { kind: 'ok', duration: 2600 });
+      if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function') {
+        var file = new File([text], name, { type: 'application/json' });
+        if (navigator.canShare({ files: [file] })) {
+          return navigator.share({ files: [file] })
+            .then(function () { return { how: 'share', name: name }; })
+            .catch(function (e) {
+              if (isAbortErr(e)) return { how: 'abort' };
+              return downloadBlob(text, name);       // 공유 실패도 조용히 폴백
+            });
+        }
+      }
+    } catch (e) { /* File 미지원 등 — ③ 으로 내려간다 */ }
+    return Promise.resolve(downloadBlob(text, name));
+  }
+
+  /**
+   * 저장 경로 3분기. 기능 감지로만 판정하며 User-Agent 를 보지 않는다.
+   * 안드로이드에 File System Access 가 도착하면 수정 없이 ① 로 승격된다.
+   *   ① showSaveFilePicker — PC: 폴더 선택 + 이름 재수정 + 덮어쓰기 확인
+   *   ② navigator.share    — Android/iOS: 공유 시트 → 드라이브 앱에서 폴더 선택
+   *   ③ <a download>       — 그 외: 기존 동작
+   * 결과 { how: 'fs'|'share'|'download'|'abort', name }
+   */
+  function saveExport(text, name) {
+    if (typeof window.showSaveFilePicker !== 'function') return shareOrDownload(text, name);
+    return window.showSaveFilePicker({
+      suggestedName: name,
+      id: 'quickcopy-export',                      // 다음번에 같은 폴더에서 열린다
+      startIn: 'documents',
+      types: [{ description: 'QuickCopy 백업', accept: { 'application/json': ['.json'] } }]
+    }).then(function (handle) {
+      return handle.createWritable().then(function (w) {
+        return w.write(text).then(function () { return w.close(); });
+      }).then(function () { return { how: 'fs', name: handle.name || name }; });
+    }).catch(function (e) {
+      if (isAbortErr(e)) return { how: 'abort' };
+      if (isBlockedErr(e)) return shareOrDownload(text, name);
+      throw e;
+    });
+  }
+
+  function exportJson() {
+    var text;
+    try {
+      text = buildExportText();                    // 모달 전에 직렬화를 끝낸다
     } catch (e) {
       toast('내보내기에 실패했습니다.', { kind: 'error', duration: 4000 });
+      return;
     }
+    var count = state.items.length;
+    askText({
+      title: 'JSON 내보내기',
+      body: '저장할 파일 이름을 입력하세요. 문구 ' + count + '개를 내보냅니다.',
+      value: defaultExportName(),
+      placeholder: 'quickcopy-backup.json',
+      okLabel: '저장',
+      validate: validateFileName
+    }).then(function (v) {
+      if (v == null) return;                       // 취소 — 안내하지 않는다
+      var name = sanitizeFileName(v);
+      if (!name) return;
+      return saveExport(text, name).then(function (r) {
+        if (!r || r.how === 'abort') return;       // 대화상자·공유 시트 취소 — 조용히 종료
+        if (pref.exportName !== name) { pref.exportName = name; savePref(); }
+        if (r.how === 'fs') {
+          toast((r.name || name) + ' 으로 저장했습니다', { kind: 'ok', duration: 2600 });
+        } else if (r.how === 'share') {
+          toast(name + ' 을 공유했습니다', { kind: 'ok', duration: 2600 });
+        } else {
+          toast(count + '개 문구를 내보냈습니다', { kind: 'ok', duration: 2600 });
+        }
+      });
+    }).catch(function (e) {
+      if (isAbortErr(e)) return;
+      toast('내보내기에 실패했습니다.', { kind: 'error', duration: 4000 });
+    });
   }
 
   function importJson() {
