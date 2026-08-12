@@ -1163,7 +1163,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   </div>
 </div>
 
-<!-- 한 줄 입력 대화상자 (그룹 이름) -->
+<!-- 한 줄 입력 대화상자 (그룹 이름 · 내보내기 파일명 공용)
+     maxlength 는 용도마다 다르므로 askText() 가 열 때마다 지정한다 -->
 <div class="scrim" id="promptScrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="promptTitle">
     <h2 id="promptTitle"></h2>
@@ -1248,7 +1249,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.2.0';
+  var APP_VERSION = '1.2.1';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 2;                 // 2 = groups 추가 (1 은 그룹 없음 → 전부 미분류로 승격)
@@ -2965,6 +2966,9 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
       E.promptBody.textContent = cfg.body || '';
       E.promptBody.hidden = !cfg.body;
       E.promptErr.textContent = '';
+      // 입력 길이 상한은 용도마다 다르다. 지정하지 않으면 그룹 이름 기준.
+      // (미지정 시 24 로 남으면, 그보다 긴 기본값을 넣었을 때 브라우저가 추가 입력을 막는다)
+      E.promptInput.setAttribute('maxlength', String(cfg.maxLength || GROUP_NAME_MAX));
       E.promptInput.value = cfg.value || '';
       E.promptInput.setAttribute('placeholder', cfg.placeholder || '');
       E.promptOk.textContent = cfg.okLabel || '확인';
@@ -3298,6 +3302,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
       value: defaultExportName(),
       placeholder: 'quickcopy-backup.json',
       okLabel: '저장',
+      maxLength: FILE_NAME_MAX,
       validate: validateFileName
     }).then(function (v) {
       if (v == null) return;                       // 취소 — 안내하지 않는다
