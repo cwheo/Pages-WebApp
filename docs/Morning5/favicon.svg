@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Morning5 앱 아이콘 — 떠오르는 해와 숫자 5">
+  <defs>
+    <!-- 배경: 방사형 그라데이션 #FFB347(중심) -> #FF7A18(외곽) -->
+    <radialGradient id="bg" cx="50%" cy="42%" r="74%">
+      <stop offset="0%" stop-color="#FFB347"/>
+      <stop offset="60%" stop-color="#FF9330"/>
+      <stop offset="100%" stop-color="#FF7A18"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!--
+    불투명 배경. iOS 는 투명도를 검게 처리하므로 반드시 채운다.
+    이 사각형은 풀블리드로 남기고, 아래 #content 만 마스커블 변형에서 축소한다.
+    (배경까지 함께 축소하면 가장자리에 이음매가 생긴다)
+  -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!--
+    핵심 요소(해 + 숫자 5)는 중심에서 반지름 410 이내(중앙 80% 안전 영역)에 둔다.
+    안드로이드 적응형 아이콘의 원형·스퀘어클 마스크에 잘리지 않도록 하기 위함이다.
+    scripts/generate-icons.mjs 가 마스커블 변형에서 이 그룹에 transform 을 주입한다.
+  -->
+  <g id="content">
+    <!-- 해 주변 은은한 광채 -->
+    <circle cx="512" cy="430" r="330" fill="url(#glow)"/>
+
+    <!-- 8방향 광선 -->
+    <g stroke="#FFFFFF" stroke-width="30" stroke-linecap="round" opacity="0.92">
+      <path d="M512 145v58"/>
+      <path d="M512 657v58"/>
+      <path d="M227 430h58"/>
+      <path d="M739 430h58"/>
+      <path d="M310 228l41 41"/>
+      <path d="M673 591l41 41"/>
+      <path d="M310 632l41-41"/>
+      <path d="M673 269l41-41"/>
+    </g>
+
+    <!-- 해 본체 -->
+    <circle cx="512" cy="430" r="195" fill="#FFFFFF"/>
+
+    <!-- 숫자 5 — 짙은 갈색, 굵은 산세리프. 폰트 의존을 없애려 획으로 그린다. -->
+    <g fill="none" stroke="#7A3E0A" stroke-width="46" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M470 348h96"/>
+      <path d="M470 348v80"/>
+      <path d="M470 428h42a62 62 0 1 1-46 100"/>
+    </g>
+
+    <!-- 지평선: 흰색 40% 반투명 물결 2줄 -->
+    <g stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="34" stroke-linecap="round" fill="none">
+      <path d="M150 800q91-36 181 0t181 0 181 0 181 0"/>
+      <path d="M232 892q70-28 140 0t140 0 140 0 140 0"/>
+    </g>
+  </g>
+</svg>

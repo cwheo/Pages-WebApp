@@ -1,0 +1,35 @@
+{
+  "name": "Morning5 — 아침 5가지 습관",
+  "short_name": "Morning5",
+  "description": "65세 이후를 준비하는 아침 습관 5가지 실천 도우미",
+  "version": "1.0.0",
+  "lang": "ko",
+  "dir": "ltr",
+  "id": "/Pages-WebApp/Morning5/",
+  "start_url": "/Pages-WebApp/Morning5/",
+  "scope": "/Pages-WebApp/Morning5/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7ED",
+  "theme_color": "#FF8C42",
+  "categories": ["health", "lifestyle", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    { "src": "icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "shortcuts": [
+    {
+      "name": "오늘 기록",
+      "short_name": "기록",
+      "url": "/Pages-WebApp/Morning5/#/history",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
