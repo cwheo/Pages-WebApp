@@ -23,8 +23,26 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Morning5" />
-    <script type="module" crossorigin src="/Pages-WebApp/Morning5/assets/index-DTe05e-w.js"></script>
-    <link rel="stylesheet" crossorigin href="/Pages-WebApp/Morning5/assets/index-rj5j-bm8.css">
+
+    <!--
+      Chrome 의 beforeinstallprompt 는 번들이 파싱되기 전에 발생할 수 있다. 놓치면
+      "설치할까요?" 를 앱이 직접 띄울 수 없으므로 여기서 먼저 붙잡아 둔다.
+      preventDefault() 로 Chrome 기본 배너(뜨다 마는 mini-infobar)도 막는다.
+      실제 처리는 src/lib/install.ts 가 한다.
+    -->
+    <script>
+      window.__m5InstallEvent = null
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault()
+        window.__m5InstallEvent = e
+        window.dispatchEvent(new Event('m5:installavailable'))
+      })
+      window.addEventListener('appinstalled', function () {
+        window.__m5InstallEvent = null
+      })
+    </script>
+    <script type="module" crossorigin src="/Pages-WebApp/Morning5/assets/index-DHaythP7.js"></script>
+    <link rel="stylesheet" crossorigin href="/Pages-WebApp/Morning5/assets/index-C5Yt7suV.css">
   </head>
   <body>
     <div id="root"></div>
