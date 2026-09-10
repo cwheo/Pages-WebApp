@@ -50,8 +50,26 @@
         background: #f7f9fb;
       }
     </style>
-    <script type="module" crossorigin src="./assets/index-4YLWRl6Q.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-DsCW3W5r.css">
+
+    <!--
+      beforeinstallprompt 는 번들이 파싱되기 전에 발생할 수 있다. 놓치면
+      "설치할까요?"를 앱이 직접 띄울 수 없으므로 여기서 먼저 붙잡아 둔다.
+      preventDefault() 로 Chrome 기본 배너(뜨다 마는 mini-infobar)도 막는다.
+      실제 처리는 src/services/install.js 가 한다.
+    -->
+    <script>
+      window.__yonderInstallEvent = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__yonderInstallEvent = e;
+        window.dispatchEvent(new Event('yonder:installavailable'));
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__yonderInstallEvent = null;
+      });
+    </script>
+    <script type="module" crossorigin src="./assets/index-CA7c7Bu1.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-8Wa1GayZ.css">
   </head>
   <body>
     <div id="app">
