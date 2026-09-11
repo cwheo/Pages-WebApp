@@ -1327,7 +1327,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.2.2';
+  var APP_VERSION = '1.2.3';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 3;                 // 3 = 문구별 색상(color) (2 = groups, 1 = 그룹 없음)
@@ -3712,7 +3712,10 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
         var id = used[it.id] ? uid() : it.id;
         used[id] = true;
         var gid = it.groupId != null ? (remap[it.groupId] || null) : null;
-        return { id: id, text: it.text, groupId: gid, createdAt: it.createdAt, updatedAt: it.updatedAt };
+        // ⚠ 항목을 필드별로 다시 만드는 곳이다. 새 필드를 추가하면 여기에도 반드시 넣을 것
+        //   (빠뜨리면 가져오기에서 그 값만 조용히 사라진다 — v1.2.2 의 color 가 그랬다)
+        return { id: id, text: it.text, groupId: gid, color: it.color || null,
+                 createdAt: it.createdAt, updatedAt: it.updatedAt };
       });
 
       setState(function (items) {
