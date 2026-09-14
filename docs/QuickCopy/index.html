@@ -63,7 +63,6 @@
   --scrim: rgba(12, 14, 18, .45);
   --shadow-1: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .08);
   --shadow-2: 0 10px 30px rgba(16, 24, 40, .16);
-  --shadow-drag: 0 14px 34px rgba(16, 24, 40, .28);
 
   --radius: 14px;
   --radius-sm: 10px;
@@ -90,7 +89,6 @@ html[data-theme="dark"] {
   --scrim: rgba(0, 0, 0, .6);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
   --shadow-2: 0 10px 30px rgba(0, 0, 0, .5);
-  --shadow-drag: 0 14px 34px rgba(0, 0, 0, .6);
   color-scheme: dark;
 }
 
@@ -159,7 +157,8 @@ button { cursor: pointer; }
 
 .wrap {
   width: 100%;
-  max-width: 640px;
+  /* 열 수에 따라 applyCols() 가 --wrap-max 를 지정한다 (1열 640 / 2열 960 / 3열 1320 / 4열 1680) */
+  max-width: var(--wrap-max, 640px);
   margin: 0 auto;
   padding: 0 14px;
 }
@@ -397,6 +396,9 @@ html[data-theme="dark"] .chip[aria-selected="true"] .cnt { background: rgba(0, 0
   margin: 0;
   padding: 14px 0 0;
   display: grid;
+  /* 열 수는 applyCols() 가 --cols 로 지정한다. '자동' 도 JS 가 계산하므로 미디어 쿼리를 두지 않는다.
+     아래 gap 을 바꾸면 스크립트의 LIST_GAP 상수도 같이 맞춰야 한다 (열 수 계산에 쓴다) */
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
   gap: 10px;
   align-items: start;
 }
@@ -404,8 +406,9 @@ html[data-theme="dark"] .chip[aria-selected="true"] .cnt { background: rgba(0, 0
 .card {
   position: relative;
   display: grid;
+  /* 1행 — v1.3.0 에서 하단 액션 줄(.acts)을 없애고 그 동작을 카드 메뉴(⋮)로 옮겼다 */
   grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
   /* ⚠ background 단축 속성 대신 롱핸드, 그리고 트랜지션 대상에서 뺀다.
      값이 var() 로 오는 배경을 전환 대상에 넣으면 Chrome 이 사용자 지정 속성이 바뀌어도
      옛 색을 계속 계산값으로 들고 있어(테마 전환·색 변경이 화면에 반영되지 않는다).
@@ -427,31 +430,32 @@ html[data-theme="dark"] .chip[aria-selected="true"] .cnt { background: rgba(0, 0
   width: 4px;
   border-radius: var(--radius) 0 0 var(--radius);
   background: var(--card-seed);
-  pointer-events: none;                 /* 핸들 클릭·드래그를 가리지 않는다 */
+  pointer-events: none;                 /* 카드 메뉴 버튼 클릭을 가리지 않는다 */
 }
 /* 겹침 효과가 불투명하면 틴트를 덮어 버린다 — 색 카드에서만 반투명으로 바꾼다 */
-.card[data-color] .handle:hover,
-.card[data-color] .mini:hover:not(:disabled) {
+.card[data-color] .cardmenu:hover,
+.card[data-color] .cardmenu[aria-expanded="true"] {
   background: color-mix(in srgb, var(--text) 8%, transparent);
 }
 .card[data-color] .body:active { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 
-/* 드래그 핸들 */
-.handle {
-  grid-column: 1; grid-row: 1 / 3;
+/* 카드 메뉴 버튼 (⋮) — v1.3.0 에서 드래그 핸들을 대체했다.
+   touch-action 을 막지 않으므로 이 자리에서도 세로 스크롤이 정상 동작한다
+   (핸들 시절에는 touch-action: none 때문에 왼쪽 44px 에서 스크롤이 먹히지 않았다) */
+.cardmenu {
+  grid-column: 1; grid-row: 1;
   width: var(--tap);
   align-self: stretch;
   display: grid; place-items: center;
   background: none; border: 0;
   border-radius: var(--radius) 0 0 var(--radius);
   color: var(--text-muted);
-  cursor: grab;
-  touch-action: none;               /* 스크롤과의 충돌 방지 */
   -webkit-user-select: none; user-select: none;
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-.handle:hover { background: var(--surface-2); color: var(--text); }
-.handle .ic { width: 18px; height: 18px; }
+.cardmenu:hover { background: var(--surface-2); color: var(--text); }
+.cardmenu[aria-expanded="true"] { background: var(--surface-2); color: var(--accent); }
+.cardmenu .ic { width: 18px; height: 18px; }
 
 /* 본문 = 복사 버튼 (주 동작) */
 .body {
@@ -461,8 +465,9 @@ html[data-theme="dark"] .chip[aria-selected="true"] .cnt { background: rgba(0, 0
   min-width: 0;
   text-align: left;
   background: none; border: 0;
-  padding: 12px 12px 4px 2px;
-  border-radius: 0 var(--radius) 0 0;
+  /* 하단 액션 줄이 사라졌으므로 아래 여백을 위와 같게 되돌린다 (카드 높이 약 100px → 약 56px) */
+  padding: 11px 12px 11px 2px;
+  border-radius: 0 var(--radius) var(--radius) 0;
   transition: background var(--dur) var(--ease);
 }
 .body:hover { background: color-mix(in srgb, var(--accent-weak) 60%, transparent); }
@@ -515,13 +520,7 @@ html[data-theme="dark"] .chip[aria-selected="true"] .cnt { background: rgba(0, 0
 }
 .body:hover .copyhint { opacity: 1; color: var(--accent); }
 
-/* 하단 액션 줄 */
-.acts {
-  grid-column: 2; grid-row: 2;
-  display: flex; align-items: center; justify-content: flex-end;
-  gap: 0;
-  padding: 0 6px 4px 0;
-}
+/* 작은 아이콘 버튼 — 그룹 관리 시트에서 쓴다 (카드의 하단 액션 줄은 v1.3.0 에서 없앴다) */
 .mini {
   width: var(--tap); height: var(--tap);   /* 최소 터치 대상 44x44 확보 */
   display: grid; place-items: center;
@@ -533,7 +532,6 @@ html[data-theme="dark"] .chip[aria-selected="true"] .cnt { background: rgba(0, 0
 .mini.del:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
 .mini:disabled { opacity: .28; cursor: default; }
 .mini .ic { width: 18px; height: 18px; }
-.spacer { flex: 1 1 auto; }
 
 /* 복사 성공 강조 */
 .card.flash {
@@ -546,35 +544,6 @@ html[data-theme="dark"] .chip[aria-selected="true"] .cnt { background: rgba(0, 0
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-weak), var(--shadow-1);
 }
-
-/* 검색 중 순서 변경 비활성 */
-.list.nosort .handle,
-.list.nosort .mini.mv {
-  opacity: .3;
-  pointer-events: none;
-}
-.list.nosort .handle { cursor: default; }
-
-/* 드래그 상태 */
-.card.dragging {
-  position: fixed;
-  z-index: 60;
-  margin: 0;
-  box-shadow: var(--shadow-drag);
-  border-color: var(--accent);
-  opacity: .96;
-  cursor: grabbing;
-  pointer-events: none;
-  will-change: transform;
-}
-.ph {
-  border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, var(--border));
-  border-radius: var(--radius);
-  background: var(--accent-weak);
-  list-style: none;
-}
-body.dragging-on { cursor: grabbing; -webkit-user-select: none; user-select: none; }
-body.dragging-on .card { transition: none; }
 
 /* 빈 상태 */
 .empty {
@@ -670,6 +639,11 @@ html[data-theme="dark"] .fab { color: #10131a; box-shadow: 0 8px 22px rgba(0, 0,
 .menu button.danger { color: var(--danger); }
 .menu button.danger .ic { color: var(--danger); }
 .menu hr { margin: 5px 6px; border: 0; border-top: 1px solid var(--border); }
+/* 카드 메뉴 — 항목 동작만 담으므로 조금 좁게 */
+.menu.cardmenu-pop { min-width: 184px; }
+/* 맨 위·맨 아래 항목은 위치에 따라 비활성된다 (검색 중에는 이동 항목 전부) */
+.menu button:disabled { opacity: .38; cursor: default; }
+.menu button:disabled:hover { background: none; }
 
 /* ============================================================
    6. 모달 / 시트
@@ -1013,11 +987,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   .brand .logo { display: none; }
 }
 
-@media (min-width: 900px) {
-  .wrap { max-width: 960px; }
-  .list { grid-template-columns: 1fr 1fr; }
-  .empty, .foot { grid-column: 1 / -1; }
-}
+/* 900px 이상 2열은 applyCols() 의 '자동' 계산이 그대로 재현한다(COLS_AUTO_2).
+   열 수를 직접 고르면 --cols / --wrap-max 가 그 값을 대신한다. */
 </style>
 </head>
 <body>
@@ -1031,7 +1002,9 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="M15.8 15.8 21 21"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></symbol>
-  <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></symbol>
+  <symbol id="i-top" viewBox="0 0 24 24"><path d="M4.6 4h14.8"/><path d="M12 20.4V8.2M6.6 13.6 12 8.2l5.4 5.4"/></symbol>
+  <symbol id="i-bottom" viewBox="0 0 24 24"><path d="M4.6 20h14.8"/><path d="M12 3.6v12.2M6.6 10.4 12 15.8l5.4-5.4"/></symbol>
+  <symbol id="i-cols" viewBox="0 0 24 24"><rect x="3.6" y="4.6" width="7" height="14.8" rx="1.8"/><rect x="13.4" y="4.6" width="7" height="14.8" rx="1.8"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V6M6 11.5 12 5.5l6 6"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v13M6 12.5l6 6 6-6"/></symbol>
@@ -1167,6 +1140,10 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     <svg class="ic" aria-hidden="true"><use href="#i-sort"/></svg><span>가나다순 정렬</span>
   </button>
   <hr>
+  <button type="button" role="menuitem" id="miCols">
+    <svg class="ic" aria-hidden="true"><use href="#i-cols"/></svg><span>목록 열 수</span><span class="state" id="miColsState">자동</span>
+  </button>
+  <hr>
   <button type="button" role="menuitemcheckbox" id="miKeepScroll" aria-checked="true">
     <svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg><span>스크롤 위치 기억</span><span class="state on" id="miKeepScrollState">켜짐</span>
   </button>
@@ -1187,6 +1164,29 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   </button>
   <button type="button" role="menuitem" id="miAbout">
     <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><span>앱 정보</span>
+  </button>
+</div>
+
+<!-- 카드 메뉴 (⋮) — 항목마다 만들지 않고 이 하나를 돌려 쓴다 -->
+<div class="menu cardmenu-pop" id="cardMenu" role="menu" aria-label="문구 동작" hidden>
+  <button type="button" role="menuitem" id="cmUp">
+    <svg class="ic" aria-hidden="true"><use href="#i-up"/></svg><span>위로 이동</span>
+  </button>
+  <button type="button" role="menuitem" id="cmDown">
+    <svg class="ic" aria-hidden="true"><use href="#i-down"/></svg><span>아래로 이동</span>
+  </button>
+  <button type="button" role="menuitem" id="cmTop">
+    <svg class="ic" aria-hidden="true"><use href="#i-top"/></svg><span>맨 위로</span>
+  </button>
+  <button type="button" role="menuitem" id="cmBottom">
+    <svg class="ic" aria-hidden="true"><use href="#i-bottom"/></svg><span>맨 아래로</span>
+  </button>
+  <hr>
+  <button type="button" role="menuitem" id="cmEdit">
+    <svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg><span>편집</span>
+  </button>
+  <button type="button" role="menuitem" id="cmDelete" class="danger">
+    <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><span>삭제</span>
   </button>
 </div>
 
@@ -1327,11 +1327,24 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.2.3';
+  var APP_VERSION = '1.3.0';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 3;                 // 3 = 문구별 색상(color) (2 = groups, 1 = 그룹 없음)
   var GROUP_NAME_MAX = 24;
+
+  /**
+   * 목록 열 수 — pref.cols 는 '자동' 이거나 **상한**(1~4)이다.
+   * 실제 열 수는 창 폭으로 한 번 더 줄이므로(열 하나당 COLS_MIN_W 확보),
+   * 폰에서 4열을 골라도 카드가 찌그러지지 않는다.
+   * '자동' 은 v1.2.3 까지의 미디어 쿼리(900px 이상 2열)를 그대로 재현한다.
+   */
+  var COLS_MAX = 4;
+  var COLS_MIN_W = 260;           // 열 하나의 최소 폭
+  var COLS_AUTO_2 = 900;          // '자동' 이 2열이 되는 창 폭
+  var LIST_GAP = 10;              // CSS .list 의 gap 과 같은 값
+  var WRAP_PAD = 28;              // CSS .wrap 좌우 패딩 14px x 2
+  var WRAP_MAX = { 1: 640, 2: 960, 3: 1320, 4: 1680 };   // 열 수별 본문 최대 폭
 
   /**
    * 문구 색상 — 사용자가 고른 색(시드)을 **카드 배경에 그대로 칠하지 않는다**.
@@ -1382,8 +1395,9 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
    *                id 는 화면 최상단에 걸린 카드, gap 은 기준선과의 미세 오프셋,
    *                y 는 항목이 사라졌을 때 쓰는 픽셀 폴백
    * - group      : 마지막으로 보고 있던 그룹 ('all' | 'none' | 그룹 id)
+   * - cols       : 목록 열 수 상한 ('auto' | 1~4). 실제 열 수는 창 폭으로 한 번 더 줄인다
    */
-  var pref = { theme: 'system', iosHintDone: false, keepScroll: true, scrolls: {}, group: 'all', exportName: '' };
+  var pref = { theme: 'system', iosHintDone: false, keepScroll: true, scrolls: {}, group: 'all', exportName: '', cols: 'auto' };
   var prefLegacyMigrated = false;    // 옛 단일 pref.scroll 을 옮겼는지
   /** 화면 상태 — group 은 'all' | 'none'(미분류) | 그룹 id */
   var ui = { query: '', searchOpen: false, group: 'all' };
@@ -1515,8 +1529,17 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     search: $('search'),
     btnSearchClear: $('btnSearchClear'),
     menu: $('menu'),
+    cardMenu: $('cardMenu'),
+    cmUp: $('cmUp'),
+    cmDown: $('cmDown'),
+    cmTop: $('cmTop'),
+    cmBottom: $('cmBottom'),
+    cmEdit: $('cmEdit'),
+    cmDelete: $('cmDelete'),
     miGroups: $('miGroups'),
     miSort: $('miSort'),
+    miCols: $('miCols'),
+    miColsState: $('miColsState'),
     miKeepScroll: $('miKeepScroll'),
     miKeepScrollState: $('miKeepScrollState'),
     miExport: $('miExport'),
@@ -1670,7 +1693,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   function seedItems() {
     var t = nowIso();
     var texts = [
-      '문구를 탭하면 클립보드에 복사됩니다.\n⠿ 를 끌거나 ▲▼ 로 순서를 바꾸고, ✎ 로 편집, 🗑 로 삭제하세요.\n이 예시는 지우면 다시 나타나지 않습니다.',
+      '문구를 탭하면 클립보드에 복사됩니다.\n왼쪽 ⋮ 를 누르면 순서 이동·편집·삭제를 고를 수 있습니다.\n이 예시는 지우면 다시 나타나지 않습니다.',
       '안녕하세요.\n요청하신 자료를 첨부하여 보내드립니다.\n확인 후 회신 부탁드립니다.\n감사합니다.',
       '우리은행 1002-123-456789 (예금주: 홍길동)'
     ];
@@ -1748,6 +1771,9 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
         pref.iosHintDone = !!p.iosHintDone;
         if (typeof p.keepScroll === 'boolean') pref.keepScroll = p.keepScroll;
         if (typeof p.group === 'string' && p.group) pref.group = p.group;
+        // 목록 열 수 — 'auto' 또는 1~4. 그 밖의 값은 무시하고 기본값(자동)을 쓴다
+        if (p.cols === 'auto') pref.cols = 'auto';
+        else if (typeof p.cols === 'number' && p.cols >= 1 && p.cols <= COLS_MAX) pref.cols = Math.round(p.cols);
         // 마지막 내보내기 파일명 — 손상된 값은 버린다(모달 기본값으로 쓰이므로)
         if (typeof p.exportName === 'string' && p.exportName && !validateFileName(p.exportName)) {
           pref.exportName = sanitizeFileName(p.exportName);
@@ -1926,6 +1952,67 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   } else if (mqDark && mqDark.addListener) {
     mqDark.addListener(function () { if (pref.theme === 'system') applyTheme(); });
   }
+
+  /* ==========================================================
+     4-1. 목록 열 수
+     ==========================================================
+     pref.cols 는 '자동' 이거나 **상한**(1~4)이다. 실제 열 수는 창 폭으로 한 번 더
+     줄이므로(열 하나당 COLS_MIN_W), 폰에서 4열을 골라도 카드가 찌그러지지 않는다.
+     열 수는 CSS 변수 두 개로만 반영되므로 목록을 다시 렌더할 필요가 없다.
+     스크롤 위치 기억은 픽셀이 아니라 **항목 id 앵커**라 열 수가 바뀌어도 그대로 동작한다.
+     ========================================================== */
+  function effectiveCols() {
+    var vw = window.innerWidth || document.documentElement.clientWidth || 640;
+    if (pref.cols === 'auto') return vw >= COLS_AUTO_2 ? 2 : 1;
+    var avail = Math.max(0, vw - WRAP_PAD);
+    var fit = Math.max(1, Math.floor((avail + LIST_GAP) / (COLS_MIN_W + LIST_GAP)));
+    return Math.max(1, Math.min(pref.cols, fit, COLS_MAX));
+  }
+
+  /** --cols / --wrap-max 를 <html> 에 지정한다 (목록은 그리드라 재렌더가 필요 없다) */
+  function applyCols() {
+    var n = effectiveCols();
+    var st = document.documentElement.style;
+    st.setProperty('--cols', String(n));
+    st.setProperty('--wrap-max', (WRAP_MAX[n] || WRAP_MAX[1]) + 'px');
+  }
+
+  function colsLabel() { return pref.cols === 'auto' ? '자동' : pref.cols + '열'; }
+
+  function applyColsUi() {
+    E.miColsState.textContent = colsLabel();
+    E.miColsState.classList.toggle('on', pref.cols !== 'auto');
+  }
+
+  /** 메뉴(⋮) → 목록 열 수. 고른 값은 상한이며, 좁은 화면에서는 자동으로 줄어든다 */
+  function chooseCols() {
+    var cur = pref.cols;
+    var btns = [
+      { label: '취소', value: null, grow: true },
+      { label: '자동', value: 'auto', kind: cur === 'auto' ? 'primary' : null }
+    ];
+    for (var n = 1; n <= COLS_MAX; n++) {
+      btns.push({ label: n + '열', value: n, kind: cur === n ? 'primary' : null });
+    }
+    ask({
+      title: '목록 열 수',
+      body: '고른 값은 상한입니다 — 화면이 좁으면 열 하나가 ' + COLS_MIN_W +
+            'px 아래로 내려가지 않도록 자동으로 줄어듭니다. ' +
+            '자동은 창 폭 ' + COLS_AUTO_2 + 'px 이상에서 2열이 됩니다.',
+      buttons: btns
+    }).then(function (v) {
+      if (v == null || pref.cols === v) return;
+      pref.cols = v;
+      savePref();
+      applyCols();
+      applyColsUi();
+      toast('목록 열 수: ' + colsLabel() + ' (지금 화면은 ' + effectiveCols() + '열)',
+            { kind: 'ok', duration: 2400 });
+    });
+  }
+
+  // 창 폭이 바뀌면 상한은 그대로인 채 실제 열 수만 달라질 수 있다
+  window.addEventListener('resize', applyCols);
 
   /* ==========================================================
      5. 토스트
@@ -2146,14 +2233,15 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     li.setAttribute('data-id', item.id);
     li.setAttribute('role', 'listitem');
 
-    // 드래그 핸들
-    var handle = el('button', 'handle');
-    handle.type = 'button';
-    handle.setAttribute('aria-label', '순서 변경 핸들 — 끌어서 이동');
-    handle.setAttribute('tabindex', '-1');    // 순서 변경은 ▲▼ 버튼으로 키보드 지원
-    handle.appendChild(ic('grip'));
-    handle.addEventListener('pointerdown', function (ev) { onHandleDown(ev, li); });
-    li.appendChild(handle);
+    // 카드 메뉴 버튼 (⋮) — 위/아래/맨 위/맨 아래/편집/삭제를 팝업으로 연다
+    var mbtn = el('button', 'cardmenu');
+    mbtn.type = 'button';
+    mbtn.setAttribute('aria-label', '문구 동작 메뉴');
+    mbtn.setAttribute('aria-haspopup', 'menu');
+    mbtn.setAttribute('aria-expanded', 'false');
+    mbtn.appendChild(ic('dots'));
+    mbtn.addEventListener('click', function () { toggleCardMenu(li.getAttribute('data-id'), mbtn); });
+    li.appendChild(mbtn);
 
     // 본문 (복사 버튼) — 원문 아래에 치환 결과 미리보기 줄이 붙는다
     var body = el('button', 'body');
@@ -2172,41 +2260,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     body.addEventListener('click', function () { copyItem(li.getAttribute('data-id')); });
     li.appendChild(body);
 
-    // 액션 줄
-    var acts = el('div', 'acts');
-    acts.appendChild(el('span', 'spacer'));
-
-    var up = el('button', 'mini mv mv-up');
-    up.type = 'button';
-    up.setAttribute('aria-label', '위로 이동');
-    up.appendChild(ic('up'));
-    up.addEventListener('click', function () { moveByButton(li.getAttribute('data-id'), -1, 'up'); });
-
-    var down = el('button', 'mini mv mv-down');
-    down.type = 'button';
-    down.setAttribute('aria-label', '아래로 이동');
-    down.appendChild(ic('down'));
-    down.addEventListener('click', function () { moveByButton(li.getAttribute('data-id'), 1, 'down'); });
-
-    var edit = el('button', 'mini edit');
-    edit.type = 'button';
-    edit.setAttribute('aria-label', '문구 편집');
-    edit.appendChild(ic('pencil'));
-    edit.addEventListener('click', function () { openEdit(li.getAttribute('data-id')); });
-
-    var del = el('button', 'mini del');
-    del.type = 'button';
-    del.setAttribute('aria-label', '문구 삭제');
-    del.appendChild(ic('trash'));
-    del.addEventListener('click', function () { removeItem(li.getAttribute('data-id')); });
-
-    acts.appendChild(up);
-    acts.appendChild(down);
-    acts.appendChild(edit);
-    acts.appendChild(del);
-    li.appendChild(acts);
-
-    li._parts = { text: text, subst: subst, substOut: substOut, body: body, up: up, down: down };
+    li._parts = { text: text, subst: subst, substOut: substOut, body: body, menu: mbtn };
     return li;
   }
 
@@ -2305,7 +2359,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     }
   }
 
-  function updateCard(node, item, pos, total, filtered) {
+  function updateCard(node, item) {
     var p = node._parts;
     if (node._text !== item.text) {
       p.text.textContent = item.text;         // 사용자 입력은 항상 textContent
@@ -2317,20 +2371,15 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     var col = item.color || null;
     if (node._color !== col) { node._color = col; paintColor(node, col); }
     if (node.getAttribute('data-id') !== item.id) node.setAttribute('data-id', item.id);
-
-    var upDis = filtered || pos === 0;
-    var downDis = filtered || pos === total - 1;
-    if (p.up.disabled !== upDis) p.up.disabled = upDis;
-    if (p.down.disabled !== downDis) p.down.disabled = downDis;
   }
 
   /**
    * 화면에 떠 있는 치환 미리보기를 현재 시각으로 다시 맞춘다.
    * 분이 넘어갔는데 카드에 옛 값이 남아 있으면 미리보기를 믿을 수 없게 된다.
-   * 화면이 가려져 있거나 드래그 중이면 건너뛴다.
+   * 화면이 가려져 있으면 건너뛴다.
    */
   function refreshSubstPreviews() {
-    if (document.hidden || drag) return;
+    if (document.hidden) return;
     if (!E.editScrim.hidden) syncEditState();   // 편집 모달의 미리보기도 같이 맞춘다
     var d = new Date();
     var vis = visibleItems();
@@ -2402,8 +2451,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 
     renderChips();
 
-    // 순서 변경 비활성 표시 (그룹 전환은 분할이므로 잠기지 않는다 — 검색만 잠근다)
-    listEl.classList.toggle('nosort', filtered);
+    // 검색 중에는 순서 변경 불가 — 카드 메뉴의 이동 항목이 비활성된다(syncCardMenu)
+    // (그룹 전환은 분할이므로 잠기지 않는다 — 검색만 잠근다)
     E.sortHint.hidden = !(filtered && items.length > 0);
 
     // 키 기반 재조정 — 필요한 노드만 만들고, 필요한 곳만 옮긴다
@@ -2415,7 +2464,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
         node = createCard(item);
         nodeById[item.id] = node;
       }
-      updateCard(node, item, i, items.length, filtered);
+      updateCard(node, item);
       if (node !== cursor) listEl.insertBefore(node, cursor);
       else cursor = cursor.nextElementSibling;
     }
@@ -2470,6 +2519,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     }
     parts.push('v' + APP_VERSION);
     E.foot.textContent = parts.join('  ·  ');
+
+    syncCardMenu();     // 팝업이 떠 있으면 이동 항목의 활성/비활성을 새 위치로 맞춘다
   }
 
   /**
@@ -2478,6 +2529,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
    */
   function selectGroup(sel, opts) {
     if (ui.group === sel) return;
+    closeCardMenu(false);                       // 그룹이 바뀌면 팝업이 가리키던 카드가 사라질 수 있다
     cancelRestore();                            // 복원 중이면 멈춘다 (저장이 건너뛰어지는 것을 막는다)
     flushCapture();                             // 떠나기 전 현재 그룹의 위치 확정
     ui.group = sel;
@@ -2790,33 +2842,51 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   }
 
   /* ==========================================================
-     9. 순서 변경 — ▲▼ 버튼
+     9. 순서 변경 — 카드 메뉴의 이동 항목
+     ==========================================================
+     재배열은 예외 없이 applyPeerOrder() 를 거친다. state.items 를 직접 건드리면
+     그룹 분할이 깨져 **다른 그룹의 상대 순서가 흔들린다.**
      ========================================================== */
-  function moveByButton(id, dir, which) {
+  /** 그룹 안에서 한 칸 옮긴다 (dir = -1 위 / +1 아래). 옮겼으면 true */
+  function moveByButton(id, dir) {
     if (isFiltered()) {
       toast('순서를 바꾸려면 검색을 지우세요.', { duration: 2600 });
-      return;
+      return false;
     }
     // 그룹 안에서의 이웃과 자리를 바꾼다 (다른 그룹의 순서는 그대로 유지)
     var p = peers();
-    var i = -1;
-    for (var k = 0; k < p.length; k++) if (p[k].id === id) { i = k; break; }
-    if (i < 0) return;
+    var i = peerIndexOf(id);
+    if (i < 0) return false;
     var j = i + dir;
-    if (j < 0 || j >= p.length) return;
+    if (j < 0 || j >= p.length) return false;
 
     var tmp = p[i];
     p[i] = p[j];
     p[j] = tmp;
 
     flip(function () { applyPeerOrder(p); });
+    return true;
+  }
 
-    // 이동 후에도 같은 버튼에 포커스를 유지해 연속 클릭이 가능하게 한다
-    var node = nodeById[id];
-    if (!node) return;
-    var target = which === 'up' ? node._parts.up : node._parts.down;
-    if (target && !target.disabled) target.focus();
-    else node._parts.body.focus();
+  /**
+   * 그룹 안에서 맨 위(edge = -1) / 맨 아래(edge = +1) 로 보낸다.
+   * 드래그를 없앤 v1.3.0 에서 '먼 거리 이동' 을 대신하는 경로다.
+   */
+  function moveToEdge(id, edge) {
+    if (isFiltered()) {
+      toast('순서를 바꾸려면 검색을 지우세요.', { duration: 2600 });
+      return false;
+    }
+    var p = peers();
+    var i = peerIndexOf(id);
+    if (i < 0) return false;
+    if (edge < 0 ? i === 0 : i === p.length - 1) return false;
+
+    var moved = p.splice(i, 1)[0];
+    if (edge < 0) p.unshift(moved); else p.push(moved);
+
+    flip(function () { applyPeerOrder(p); });
+    return true;
   }
 
   /* ==========================================================
@@ -2852,7 +2922,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
    * 정렬 범위는 **현재 보고 있는 그룹**이다 ('전체' 에서는 전부).
    */
   function sortItems() {
-    if (isFiltered()) {                               // 순서 변경은 검색 중 비활성 (▲▼·드래그와 동일)
+    if (isFiltered()) {                               // 순서 변경은 검색 중 비활성 (카드 메뉴의 이동 항목과 동일)
       toast('순서를 바꾸려면 검색을 지우세요.', { duration: 2600 });
       return;
     }
@@ -2933,199 +3003,159 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   }
 
   /* ==========================================================
-     10. 순서 변경 — Pointer Events 드래그
+     10. 카드 메뉴 (⋮)
+     ==========================================================
+     v1.3.0 에서 드래그(Pointer Events)를 없애고, 카드 왼쪽 44px 자리를 이 메뉴 버튼으로
+     바꿨다. 팝업 DOM 은 항목마다 만들지 않고 #cardMenu 하나를 돌려 쓰므로,
+     키 기반 재조정 렌더(7절)의 비용이 그대로 0 으로 유지된다.
      ========================================================== */
-  var drag = null;
+  var cardMenuId = null;          // 팝업이 가리키는 문구 id
+  var cardMenuBtn = null;         // 팝업을 연 버튼 (닫을 때 포커스를 되돌린다)
 
-  function onHandleDown(ev, card) {
-    if (drag) return;
-    if (isFiltered()) return;                        // 검색 중에는 순서 변경 불가
-    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
-    if (anyScrimOpen()) return;
+  function cardMenuOpen() { return !E.cardMenu.hidden; }
 
-    var handle = ev.currentTarget;
-    try { handle.setPointerCapture(ev.pointerId); } catch (e) { /* 무시 */ }
-
-    drag = {
-      card: card,
-      handle: handle,
-      pointerId: ev.pointerId,
-      startX: ev.clientX,
-      startY: ev.clientY,
-      lastX: ev.clientX,
-      lastY: ev.clientY,
-      fromIndex: peerIndexOf(card.getAttribute('data-id')),   // 그룹 안에서의 위치
-      active: false,
-      oneCol: true,
-      ph: null,
-      raf: 0
-    };
-
-    handle.addEventListener('pointermove', onHandleMove);
-    handle.addEventListener('pointerup', onHandleUp);
-    handle.addEventListener('pointercancel', onHandleCancel);
-    window.addEventListener('blur', onHandleCancel);
-  }
-
-  function startDrag() {
-    var card = drag.card;
-    var r = card.getBoundingClientRect();
-
-    // 1열인지 2열 그리드인지 — 카드가 목록 폭을 거의 다 차지하면 1열
-    var lw = E.list.getBoundingClientRect().width;
-    drag.oneCol = !(lw > 0) || r.width > lw * 0.9;
-
-    // 자리를 지키는 플레이스홀더를 넣고, 카드는 화면 좌표로 띄운다
-    var ph = el('li', 'ph');
-    ph.setAttribute('aria-hidden', 'true');
-    ph.style.width = r.width + 'px';
-    ph.style.height = r.height + 'px';
-    E.list.insertBefore(ph, card);
-    E.list.removeChild(card);
-
-    card.style.width = r.width + 'px';
-    card.style.height = r.height + 'px';
-    card.style.left = r.left + 'px';
-    card.style.top = r.top + 'px';
-    card.classList.add('dragging');
-    document.body.appendChild(card);
-    document.body.classList.add('dragging-on');
-
-    drag.ph = ph;
-    drag.active = true;
-    drag.raf = requestAnimationFrame(autoScrollTick);
-    positionCard();
-  }
-
-  function positionCard() {
-    var dx = drag.lastX - drag.startX;
-    var dy = drag.lastY - drag.startY;
-    drag.card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(1.015)';
+  /** 포커스 때문에 목록이 튀면 고정 위치 팝업이 어긋나므로 preventScroll 을 쓴다 */
+  function focusQuiet(node) {
+    if (!node) return;
+    try { node.focus({ preventScroll: true }); }
+    catch (e) { try { node.focus(); } catch (e2) { /* 무시 */ } }
   }
 
   /**
-   * 기준 카드가 포인터보다 앞(읽기 순서상 먼저)인지 판정.
-   *
-   * 1열에서는 **세로 중앙만** 본다. 카드가 목록 폭을 다 차지하므로 가로 비교가
-   * "화면 오른쪽 절반인가" 라는 무의미한 판정이 되어, 아래로 끌 때 다음 카드의
-   * 아래 끝까지 지나야 자리가 바뀌었다(위로 100px / 아래로 150px 로 비대칭).
-   * 2열 그리드에서는 같은 행 안에서 가로 중앙으로 판정해야 하므로 기존 규칙을 쓴다.
+   * 팝업을 기준 사각형 아래에 붙인다. 아래로 넘치면 위로 뒤집고, 좌우는 화면 안으로 민다.
+   * align='right' 면 기준의 오른쪽 끝에 맞춘다(헤더 메뉴).
    */
-  function precedesPointer(r, x, y, oneCol) {
-    var cy = r.top + r.height / 2;
-    if (oneCol) return y > cy;
-    if (y > r.bottom) return true;                   // 위쪽 행
-    if (y < r.top) return false;                     // 아래쪽 행
-    return x > r.left + r.width / 2;                 // 같은 행 — 가로 중앙 기준
+  function placeMenuAt(menuEl, r, align) {
+    var mw = menuEl.offsetWidth, mh = menuEl.offsetHeight;
+    var x = align === 'right' ? r.right - mw : r.left;
+    var left = Math.min(Math.max(8, x), Math.max(8, window.innerWidth - mw - 8));
+    var top = r.bottom + 6;
+    if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+    menuEl.style.left = left + 'px';
+    menuEl.style.top = top + 'px';
   }
 
-  function updatePlaceholder() {
-    var kids = [];
-    for (var i = 0; i < E.list.children.length; i++) {
-      var k = E.list.children[i];
-      if (k !== drag.ph) kids.push(k);
-    }
-    var idx = 0;
-    for (var j = 0; j < kids.length; j++) {
-      if (precedesPointer(kids[j].getBoundingClientRect(), drag.lastX, drag.lastY, drag.oneCol)) idx++;
-    }
-    var ref = kids[idx] || null;
-    if (drag.ph.nextElementSibling === ref && drag.ph.parentNode === E.list) return;   // 이미 그 위치
-    if (ref === drag.ph) return;
-    flip(function () { E.list.insertBefore(drag.ph, ref); });
+  /**
+   * 카드 메뉴 버튼의 화면 좌표 — **레이아웃 값(offsetTop)** 으로 계산한다.
+   * ⚠ getBoundingClientRect() 를 쓰면 안 된다. FLIP 애니메이션(flip())이 카드에
+   * transform 을 걸어 두므로, 한 칸 옮긴 직후에는 **옛 위치**가 돌아와 팝업이
+   * 엉뚱한 자리에 붙는다. offsetTop/offsetLeft 는 transform 의 영향을 받지 않는다.
+   */
+  function cardBtnRect(node) {
+    var lr = E.list.getBoundingClientRect();
+    var btn = node._parts.menu;
+    var left = lr.left + (node.offsetLeft - E.list.offsetLeft);
+    var top = lr.top + (node.offsetTop - E.list.offsetTop);
+    return { left: left, top: top, right: left + btn.offsetWidth, bottom: top + btn.offsetHeight };
   }
 
-  function autoScrollTick() {
-    if (!drag || !drag.active) return;
-    var zone = 76;
-    var h = window.innerHeight;
-    var y = drag.lastY;
-    var dv = 0;
-    if (y < zone) dv = -Math.ceil((zone - y) / 3);
-    else if (y > h - zone) dv = Math.ceil((y - (h - zone)) / 3);
-    if (dv) {
-      var before = window.pageYOffset;
-      window.scrollBy(0, dv);
-      if (window.pageYOffset !== before) updatePlaceholder();
-    }
-    drag.raf = requestAnimationFrame(autoScrollTick);
+  /**
+   * 이동 항목의 활성/비활성을 현재 위치로 다시 맞춘다.
+   * render() 끝과 이동 직후에 불리므로, 팝업을 열어 둔 채 위치가 바뀌어도 상태가 따라온다.
+   * 팝업이 가리키던 문구가 사라졌으면(삭제·그룹 이동) 팝업을 닫는다.
+   */
+  function syncCardMenu() {
+    if (!cardMenuOpen()) return;
+    var node = nodeById[cardMenuId];
+    var i = peerIndexOf(cardMenuId);
+    if (!node || i < 0) { closeCardMenu(false); return; }
+    var locked = isFiltered();                  // 검색 중에는 순서 변경 불가
+    var total = peers().length;
+    var atTop = i === 0, atBottom = i === total - 1;
+    E.cmUp.disabled = locked || atTop;
+    E.cmTop.disabled = locked || atTop;
+    E.cmDown.disabled = locked || atBottom;
+    E.cmBottom.disabled = locked || atBottom;
   }
 
-  function onHandleMove(ev) {
-    if (!drag || ev.pointerId !== drag.pointerId) return;
-    drag.lastX = ev.clientX;
-    drag.lastY = ev.clientY;
-    if (!drag.active) {
-      var dist = Math.abs(ev.clientX - drag.startX) + Math.abs(ev.clientY - drag.startY);
-      if (dist < 5) return;                          // 오차 범위 내 클릭은 드래그로 보지 않는다
-      startDrag();
-    }
-    ev.preventDefault();
-    positionCard();
-    updatePlaceholder();
+  function openCardMenu(id, btn) {
+    closeMenu(false);                           // 헤더 메뉴와 동시에 떠 있지 않게
+    closeCardMenu(false);
+    cardMenuId = id;
+    cardMenuBtn = btn;
+    E.cardMenu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    syncCardMenu();
+    if (!cardMenuOpen()) return;                // syncCardMenu() 가 닫았으면 여기서 끝
+    var node = nodeById[id];
+    placeMenuAt(E.cardMenu, node ? cardBtnRect(node) : btn.getBoundingClientRect(), 'left');
+    setTimeout(function () {
+      focusQuiet(E.cmUp.disabled ? E.cmEdit : E.cmUp);
+    }, 0);
   }
 
-  function endDragCleanup() {
-    if (!drag) return;
-    var handle = drag.handle;
-    handle.removeEventListener('pointermove', onHandleMove);
-    handle.removeEventListener('pointerup', onHandleUp);
-    handle.removeEventListener('pointercancel', onHandleCancel);
-    window.removeEventListener('blur', onHandleCancel);
-    try { handle.releasePointerCapture(drag.pointerId); } catch (e) { /* 무시 */ }
-    if (drag.raf) cancelAnimationFrame(drag.raf);
-
-    var card = drag.card;
-    if (drag.active) {
-      card.classList.remove('dragging');
-      card.style.transform = '';
-      card.style.width = '';
-      card.style.height = '';
-      card.style.left = '';
-      card.style.top = '';
-      document.body.classList.remove('dragging-on');
-      if (card.parentNode === document.body) document.body.removeChild(card);
+  function closeCardMenu(refocus) {
+    if (E.cardMenu.hidden) return;
+    E.cardMenu.hidden = true;
+    var btn = cardMenuBtn;
+    cardMenuId = null;
+    cardMenuBtn = null;
+    if (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+      if (refocus) { try { btn.focus(); } catch (e) { /* 무시 */ } }
     }
-    drag = null;
   }
 
-  function onHandleUp(ev) {
-    if (!drag || ev.pointerId !== drag.pointerId) return;
-    if (!drag.active) { endDragCleanup(); return; }
-
-    var from = drag.fromIndex;
-    var ph = drag.ph;
-    var card = drag.card;
-
-    // 플레이스홀더 위치 = 새 인덱스
-    var to = 0;
-    for (var i = 0; i < E.list.children.length; i++) {
-      if (E.list.children[i] === ph) { to = i; break; }
-    }
-    E.list.insertBefore(card, ph);
-    E.list.removeChild(ph);
-    endDragCleanup();
-
-    if (to === from || from < 0) { render(); return; }
-    // 그룹 안에서만 재배열한 뒤, 그 그룹이 쓰던 슬롯에 되쓴다 (드롭 확정 시점에 1회만 저장)
-    var p = peers();
-    if (from >= p.length || to > p.length) { render(); return; }
-    var moved = p.splice(from, 1)[0];
-    p.splice(to, 0, moved);
-    applyPeerOrder(p);
-    if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) { /* 무시 */ } }
+  function toggleCardMenu(id, btn) {
+    if (cardMenuOpen() && cardMenuId === id) { closeCardMenu(true); return; }
+    openCardMenu(id, btn);
   }
 
-  function onHandleCancel() {
-    if (!drag) return;
-    var ph = drag.ph, card = drag.card, wasActive = drag.active;
-    if (wasActive && ph && ph.parentNode === E.list) {
-      E.list.insertBefore(card, ph);
-      E.list.removeChild(ph);
-    }
-    endDragCleanup();
-    render();                                          // 원래 순서로 복귀
+  /**
+   * 한 칸 이동 — 팝업을 **닫지 않는다**. 카드를 따라 팝업을 다시 붙이고 포커스도
+   * 같은 항목에 유지해, 여러 칸을 연속으로 누를 수 있게 한다(드래그 상실 보완).
+   */
+  function cardMenuStep(dir) {
+    var id = cardMenuId;
+    if (!id) return;
+    if (!moveByButton(id, dir)) return;         // render() 안에서 syncCardMenu() 가 이미 돌았다
+    if (!cardMenuOpen()) return;
+    var node = nodeById[id];
+    if (!node) { closeCardMenu(false); return; }
+    placeMenuAt(E.cardMenu, cardBtnRect(node), 'left');
+    // 끝에 닿아 방금 누른 항목이 비활성되면 반대쪽으로 포커스를 넘긴다
+    var same = dir < 0 ? E.cmUp : E.cmDown;
+    focusQuiet(same.disabled ? (dir < 0 ? E.cmDown : E.cmUp) : same);
   }
+
+  /** 맨 위 / 맨 아래로 — 화면 밖으로 멀리 가므로 팝업을 닫고 그 문구를 보여 준다 */
+  function cardMenuEdge(edge) {
+    var id = cardMenuId;
+    if (!id) return;
+    closeCardMenu(false);
+    if (!moveToEdge(id, edge)) return;
+    scrollToItem(id);
+    var node = nodeById[id];
+    if (node && node._parts) focusQuiet(node._parts.body);
+    toast(edge < 0 ? '맨 위로 옮겼습니다' : '맨 아래로 옮겼습니다', { duration: 1800 });
+  }
+
+  E.cmUp.addEventListener('click', function () { cardMenuStep(-1); });
+  E.cmDown.addEventListener('click', function () { cardMenuStep(1); });
+  E.cmTop.addEventListener('click', function () { cardMenuEdge(-1); });
+  E.cmBottom.addEventListener('click', function () { cardMenuEdge(1); });
+  E.cmEdit.addEventListener('click', function () {
+    var id = cardMenuId;
+    closeCardMenu(false);
+    if (id) openEdit(id);
+  });
+  E.cmDelete.addEventListener('click', function () {
+    var id = cardMenuId;
+    closeCardMenu(false);
+    if (id) removeItem(id);
+  });
+
+  // 바깥 클릭 · 스크롤 · 창 크기 변경으로 닫는다.
+  // ⚠ 스크롤을 반드시 넣어야 한다 — 팝업이 position: fixed 라, 목록이 스크롤되면
+  //    카드만 움직이고 팝업은 제자리에 남는다(헤더 메뉴는 sticky 버튼이라 없던 문제).
+  document.addEventListener('pointerdown', function (ev) {
+    if (!cardMenuOpen()) return;
+    if (E.cardMenu.contains(ev.target)) return;
+    if (cardMenuBtn && cardMenuBtn.contains(ev.target)) return;
+    closeCardMenu(false);
+  }, true);
+  window.addEventListener('scroll', function () { closeCardMenu(false); }, { passive: true });
+  window.addEventListener('resize', function () { closeCardMenu(false); });
 
   /* ==========================================================
      11. 검색
@@ -3180,13 +3210,10 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
      12. 메뉴
      ========================================================== */
   function openMenu() {
+    closeCardMenu(false);                   // 카드 메뉴와 동시에 떠 있지 않게
     E.menu.hidden = false;
     E.btnMenu.setAttribute('aria-expanded', 'true');
-    var r = E.btnMenu.getBoundingClientRect();
-    var mw = E.menu.offsetWidth;
-    var left = Math.min(Math.max(8, r.right - mw), window.innerWidth - mw - 8);
-    E.menu.style.left = left + 'px';
-    E.menu.style.top = (r.bottom + 6) + 'px';
+    placeMenuAt(E.menu, E.btnMenu.getBoundingClientRect(), 'right');
     var first = E.menu.querySelector('button');
     if (first) setTimeout(function () { try { first.focus(); } catch (e) { /* 무시 */ } }, 0);
   }
@@ -3886,6 +3913,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
           ? '켜짐 (그룹별 ' + Object.keys(pref.scrolls).length + '곳 기억 중)'
           : '켜짐'));
     add('보고 있는 그룹', groupLabel(ui.group));
+    add('목록 열 수', colsLabel() + ' · 지금 화면 ' + effectiveCols() + '열');
     add('데이터 위치', '이 기기의 브라우저 저장소 (서버 전송 없음)');
     openScrim(E.aboutScrim, E.aboutClose);
   }
@@ -3909,6 +3937,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 
   E.miGroups.addEventListener('click', function () { closeMenu(false); openGroups(); });
   E.miSort.addEventListener('click', function () { closeMenu(false); sortItems(); });
+  E.miCols.addEventListener('click', function () { closeMenu(false); chooseCols(); });
   // 켜기/끄기 항목은 상태 변화가 바로 보이도록 메뉴를 닫지 않는다
   E.miKeepScroll.addEventListener('click', toggleKeepScroll);
   E.miExport.addEventListener('click', function () { closeMenu(false); exportJson(); });
@@ -3951,7 +3980,6 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 
     // Esc — 모달 / 메뉴 / 검색 닫기
     if (ev.key === 'Escape' || ev.key === 'Esc') {
-      if (drag) { onHandleCancel(); return; }
       var scrim = topScrim();
       if (scrim) {
         ev.preventDefault();
@@ -3960,7 +3988,23 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
         return;
       }
       if (!E.menu.hidden) { closeMenu(true); return; }
+      if (cardMenuOpen()) { closeCardMenu(true); return; }
       if (ui.searchOpen) { ev.preventDefault(); closeSearch(); try { E.btnSearch.focus(); } catch (e) { /* 무시 */ } }
+      return;
+    }
+
+    // Alt+↑ / Alt+↓ — 포커스가 있는 카드를 그룹 안에서 한 칸 옮긴다.
+    // 팝업을 열지 않고 연속으로 옮길 수 있는 지름길(드래그를 없앤 대신 남긴 키보드 경로).
+    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && (ev.key === 'ArrowUp' || ev.key === 'ArrowDown')) {
+      var host = (t && t.closest) ? t.closest('.card') : null;
+      if (!host || anyScrimOpen()) return;
+      ev.preventDefault();
+      var mid = host.getAttribute('data-id');
+      if (moveByButton(mid, ev.key === 'ArrowUp' ? -1 : 1)) {
+        var movedNode = nodeById[mid];
+        // 옮긴 뒤에도 같은 카드에 포커스를 유지해 연속으로 누를 수 있게 한다
+        if (movedNode && movedNode._parts) focusQuiet(movedNode._parts.body);
+      }
       return;
     }
 
@@ -4071,7 +4115,6 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     var kids = E.list.children;
     for (var i = 0; i < kids.length; i++) {
       var node = kids[i];
-      if (node.classList.contains('ph')) continue;      // 드래그 플레이스홀더 제외
       var id = node.getAttribute('data-id');
       if (!id) continue;
       var r = node.getBoundingClientRect();
@@ -4085,7 +4128,6 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /** 현재 위치를 pref 에 기록한다 — 그룹별로 따로 저장한다 */
   function captureScroll() {
     if (!pref.keepScroll) return;
-    if (drag) return;                                   // 드래그 중 자동 스크롤은 사용자 의도가 아니다
     if (ui.searchOpen || isFiltered()) return;          // 검색 중 위치는 다음 실행과 무관하다
     var key = ui.group;
     var a = currentAnchor();
@@ -4218,6 +4260,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) { /* 무시 */ }
   loadPref();
   applyTheme();
+  applyCols();                                // 목록 열 수 (--cols / --wrap-max)
+  applyColsUi();
   applyKeepScrollUi();
   loadData();
   ui.group = pref.group;
