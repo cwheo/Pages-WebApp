@@ -72,6 +72,7 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   button { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }   /* .btn 등 display 지정 요소도 hidden 속성으로 숨김 */
 
   .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 40px; }
 
@@ -221,6 +222,32 @@
   .r-section { font-size: 12px; color: var(--muted); padding: 10px 12px 4px; font-weight: 600; }
   .empty { padding: 28px 12px; text-align: center; color: var(--muted); font-size: 14px; }
 
+  /* ---------- 설치 안내 대화상자 ---------- */
+  dialog.guide { width: min(420px, calc(100vw - 32px)); }
+  .guide-body { padding: 20px 20px 6px; overflow-y: auto; }
+  .guide-body h3 { margin: 0 0 12px; font-size: 17px; }
+  .guide-body p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.55; }
+  .guide-url {
+    font-size: 13px; padding: 8px 10px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--line);
+    word-break: break-all; -webkit-user-select: all; user-select: all;
+  }
+  .steps { list-style: none; margin: 4px 0 10px; padding: 0; display: grid; gap: 10px; }
+  .steps li { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; line-height: 1.5; }
+  .steps .no {
+    flex: none; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--primary); color: var(--primary-text); font-size: 12px; font-weight: 700;
+  }
+  .ico { width: 17px; height: 17px; vertical-align: -3px; }
+  .guide-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 8px; padding: 12px 20px 18px; }
+  .guide-mute {
+    margin-right: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--muted); cursor: pointer; -webkit-user-select: none; user-select: none;
+  }
+  .guide-mute input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); }
+  .guide-btns { display: flex; gap: 8px; margin-left: auto; }   /* 좁으면 버튼 묶음째 다음 줄로 */
+
   .toast {
     position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
     transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none;
@@ -295,6 +322,20 @@
   <ul class="results" id="results"></ul>
 </dialog>
 
+<dialog id="guide" class="guide" aria-labelledby="guideTitle">
+  <div class="guide-body">
+    <h3 id="guideTitle"></h3>
+    <div id="guideText"></div>
+  </div>
+  <div class="guide-actions">
+    <label class="guide-mute"><input type="checkbox" id="guideMute"> 다시 보지 않기</label>
+    <div class="guide-btns">
+      <button type="button" class="btn" id="guideCancel"></button>
+      <button type="button" class="btn primary" id="guideOk"></button>
+    </div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -302,7 +343,7 @@
   'use strict';
 
   // 앱 버전 - 09_ChangeVersionName.py 로 sw.js CACHE 와 함께 변경한다
-  var APP_VERSION = '1.0.0';
+  var APP_VERSION = '1.0.1';
 
   var MAX = 10, MIN = 1;
   var KEY_CITIES = 'worldclock.cities.v1';
@@ -660,11 +701,11 @@
   }
 
   var toastTimer;
-  function toast(msg) {
+  function toast(msg, ms) {
     toastEl.textContent = msg;
     toastEl.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, ms || 1800);
   }
 
   // ---------- 12/24 시간 ----------
@@ -752,20 +793,286 @@
       '내 시간대 · ' + (tz ? tz + ' ' : '') + '(' + fmtOffset(localOffsetMs(Date.now())) + ')';
   })();
 
-  // ---------- 설치 (PWA) ----------
+  // ---------- 설치 (PWA) · 실행 환경 안내 ----------
+  // 목표는 홈 화면에 설치해 오프라인으로 쓰는 것이며, 플랫폼마다 설치 경로가 다르다.
+  //   Android : 설치를 제대로 지원하는 것은 Chrome. Chrome 이 아니면(카카오톡 등 인앱 웹뷰,
+  //             삼성 인터넷 등) 실행할 때마다 Chrome 으로 열지 묻는다. Chrome 이 없는 기기로
+  //             확인되면 더 묻지 않는다. Chrome 에서는 설치 가능해지면 설치 창을 묻는다.
+  //   iOS     : 설치 창을 띄울 API 가 없어 공유 → '홈 화면에 추가' 절차를 안내한다.
+  //             Safari 와 iOS 16.4+ 의 Chrome·Edge 등은 추가 가능, 인앱 웹뷰는 불가 → Safari 로 유도.
+  // 이미 홈 화면 앱으로 실행 중이거나 file:// 로 열었으면 아무것도 묻지 않는다.
+  // UA 판별은 취약하지만 인앱 웹뷰를 알아낼 표준 API 가 없다. 오탐이어도 안내 창이 뜨는 정도다.
+  var KEY_NOCHROME = 'worldclock.nochrome.v1';
+  var KEY_GUIDE_OFF = 'worldclock.guideoff.v1';   // '다시 보지 않기' 한 안내 종류 { chrome: true, ... }
+  var NO_CHROME_MARK = 'wcnochrome';   // intent fallback 주소 표식 (Chrome 미설치 감지)
+  var GUIDE_DELAY_MS = 800;            // 시계가 먼저 그려지도록 살짝 늦게 띄운다
+
+  var IN_APP = [
+    { re: /KAKAOTALK/i, label: '카카오톡', kakao: true },
+    { re: /NAVER\(inapp/i, label: '네이버 앱' },
+    { re: /\bLine\//i, label: '라인' },
+    { re: /\b(FBAN|FBAV|FB_IAB)\b/i, label: '페이스북' },
+    { re: /Instagram/i, label: '인스타그램' },
+    { re: /DaumApps|DaumDevice/i, label: '다음 앱' },
+    { re: /\bBAND\//i, label: '밴드' },
+    { re: /;\s*wv\)/i, label: '다른 앱' }   // Android 웹뷰 표식 (진짜 Chrome 에는 없음)
+  ];
+  // Chrome 계열이지만 Chrome 이 아닌 브라우저
+  var OTHER_BROWSERS = [
+    { re: /SamsungBrowser/i, label: '삼성 인터넷' },
+    { re: /Whale/i, label: '웨일' },
+    { re: /\b(EdgA|EdgiOS|Edg)\b/i, label: 'Edge' },
+    { re: /\b(OPR|OPT|OPiOS)\b/i, label: 'Opera' },
+    { re: /\b(FxiOS|Firefox)\b/i, label: 'Firefox' },
+    { re: /DuckDuckGo/i, label: 'DuckDuckGo' },
+    { re: /Brave/i, label: 'Brave' },
+    { re: /UCBrowser/i, label: 'UC 브라우저' },
+    { re: /MiuiBrowser/i, label: 'Mi 브라우저' },
+    { re: /HeyTapBrowser/i, label: 'HeyTap 브라우저' }
+  ];
+
+  function findUa(list, ua) {
+    for (var i = 0; i < list.length; i++) if (list[i].re.test(ua)) return list[i];
+    return null;
+  }
+  function detectStandalone() {
+    try {
+      if (matchMedia('(display-mode: standalone)').matches ||
+          matchMedia('(display-mode: fullscreen)').matches ||
+          matchMedia('(display-mode: minimal-ui)').matches) return true;
+    } catch (e) { /* matchMedia 미지원 */ }
+    return navigator.standalone === true;   // iOS Safari 비표준
+  }
+  function detectEnv() {
+    var ua = navigator.userAgent || '';
+    var inApp = findUa(IN_APP, ua);
+    var other = findUa(OTHER_BROWSERS, ua);
+    // iPadOS 13+ 는 데스크톱 Safari 로 위장하므로 터치 지원으로 가른다
+    var isIOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+    var isChrome = /Chrome\/|CriOS\//i.test(ua) && !inApp && !other;
+    // iOS 버전 (예: 'OS 16_4' → 1604). 데스크톱 위장 UA 는 버전이 없어 최신으로 간주
+    var m = ua.match(/OS (\d+)_(\d+)/);
+    var iosVer = !isIOS ? 0 : (m ? (+m[1]) * 100 + (+m[2]) : 9999);
+    var label = inApp ? inApp.label : other ? other.label : isChrome ? 'Chrome' : isIOS ? 'Safari' : '이 브라우저';
+    return {
+      isAndroid: /Android/i.test(ua),
+      isIOS: isIOS,
+      iosVer: iosVer,
+      standalone: detectStandalone(),
+      inApp: inApp,
+      isChrome: isChrome,
+      iosSafari: isIOS && !inApp && !isChrome && !other,
+      label: label
+    };
+  }
+  var env = detectEnv();
+  var webOk = /^https?:$/.test(location.protocol);
+
+  // intent fallback 으로 되돌아왔으면(= Chrome 미설치) 기록하고 주소에서 표식을 지운다
+  (function () {
+    try {
+      var params = new URLSearchParams(location.search);
+      if (!params.has(NO_CHROME_MARK)) return;
+      save(KEY_NOCHROME, true);
+      params.delete(NO_CHROME_MARK);
+      var q = params.toString();
+      history.replaceState(history.state, '', location.pathname + (q ? '?' + q : '') + location.hash);
+    } catch (e) { /* 무시 */ }
+  })();
+
+  /** 이번 실행에서 보여줄 안내 종류. null 이면 안내 없음 */
+  function guideKind() {
+    if (!webOk || env.standalone) return null;
+    if (env.isIOS) {
+      if (env.inApp) return 'iosSafari';                          // 인앱 웹뷰는 추가 불가
+      if (env.iosSafari || env.iosVer >= 1604) return 'iosAddHome';
+      return 'iosSafari';                                         // 16.4 미만 타 브라우저
+    }
+    if (env.isAndroid && !env.isChrome && !load(KEY_NOCHROME, false)) return 'chrome';
+    return null;   // Android Chrome · 데스크톱은 beforeinstallprompt 를 기다린다
+  }
+
+  function appUrl() { return location.origin + location.pathname; }
+
+  /** 같은 주소를 Chrome 으로 연다 (Android). Chrome 이 없으면 표식 달린 fallback 주소가 현재 브라우저에 열린다 */
+  function openInChrome() {
+    var url = appUrl();
+    var fallback = url + '?' + NO_CHROME_MARK + '=1';
+    location.href = 'intent://' + url.replace(/^https?:\/\//, '') +
+      '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' +
+      encodeURIComponent(fallback) + ';end';
+    // 카카오톡은 intent 를 막는 버전이 있다 — 화면이 그대로면 외부 브라우저로 한 번 더 시도
+    if (env.inApp && env.inApp.kakao) {
+      setTimeout(function () {
+        if (!document.hidden) location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+      }, 1200);
+    }
+  }
+
+  function copyUrl() {
+    var url = appUrl();
+    function legacy() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = url;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, url.length);   // iOS 는 이것까지 해야 선택된다
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch (e) { return false; }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(url).then(function () { return true; }, legacy);
+    }
+    return Promise.resolve(legacy());
+  }
+
+  function escapeHtml(t) {
+    return String(t).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  var ICON_SHARE ='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+  var ICON_ADD = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+
+  var guide = document.getElementById('guide');
+  var guideTitle = document.getElementById('guideTitle');
+  var guideText = document.getElementById('guideText');
+  var guideOk = document.getElementById('guideOk');
+  var guideCancel = document.getElementById('guideCancel');
+  var guideMute = document.getElementById('guideMute');
+  var guideOnOk = null;
+  var guideKindShown = null;
+
+  // 기기(브라우저)마다 저장소가 따로라서, 이미 설치한 뒤 카카오톡 · Safari 로 다시 열면
+  // 설치 여부를 알 수 없다. 그런 경우 반복 안내를 끄도록 안내 종류별로 기억한다.
+  // 헤더 '앱 설치' 버튼으로는 계속 열 수 있고, 거기서 체크를 풀면 자동 안내가 다시 켜진다.
+  function isGuideOff(kind) { return !!load(KEY_GUIDE_OFF, {})[kind]; }
+  function setGuideOff(kind, off) {
+    var map = load(KEY_GUIDE_OFF, {});
+    if (off) map[kind] = true; else delete map[kind];
+    save(KEY_GUIDE_OFF, map);
+  }
+
+  function closeGuide() { if (guide.open) guide.close(); }
+  // 체크를 바꾸는 즉시 저장 — 어떤 방법으로 닫든(버튼 · 바깥 클릭 · Esc · 다른 앱으로 전환) 유지된다
+  guideMute.addEventListener('change', function () {
+    if (guideKindShown) setGuideOff(guideKindShown, guideMute.checked);
+  });
+  guideOk.addEventListener('click', function () { var fn = guideOnOk; closeGuide(); if (fn) fn(); });
+  guideCancel.addEventListener('click', closeGuide);
+
+  function showGuide(kind) {
+    var b = '<b>' + escapeHtml(env.label) + '</b>';
+    var c = { cancel: '그냥 보기', onOk: null };
+    if (kind === 'chrome') {
+      c.title = 'Chrome 에서 열까요?';
+      c.html = (env.inApp
+          ? '<p>지금은 ' + b + ' 안의 브라우저로 열려 있어 홈 화면에 앱을 설치할 수 없습니다.</p>'
+          : '<p>지금은 ' + b + ' 에서 열려 있습니다.</p>') +
+        '<p>Chrome 에서 열면 홈 화면에 세계 시계를 설치할 수 있고, 설치 후에는 네트워크 없이도 실행됩니다.</p>';
+      c.ok = 'Chrome 으로 열기';
+      c.onOk = openInChrome;
+    } else if (kind === 'install') {
+      c.title = '세계 시계를 설치할까요?';
+      c.html = '<p>홈 화면에 아이콘이 추가되고, 주소창 없는 앱 화면으로 실행됩니다.</p>' +
+        '<p>설치 후에는 네트워크 없이도 동작합니다.</p>';
+      c.ok = '설치';
+      c.cancel = '나중에';
+      c.onOk = promptInstall;
+    } else if (kind === 'iosSafari') {
+      var kakao = env.inApp && env.inApp.kakao;
+      c.title = 'Safari 에서 열까요?';
+      c.html = '<p>지금은 ' + b + (env.inApp ? ' 안의 브라우저로' : ' 에서') + ' 열려 있어 홈 화면에 추가할 수 없습니다. ' +
+        (env.inApp ? '' : '이 iOS 버전에서는 ') + '<b>Safari</b> 에서 홈 화면에 추가할 수 있습니다.</p>' +
+        (kakao
+          ? '<p>Safari 로 열면 홈 화면에 세계 시계를 추가할 수 있고, 추가 후에는 네트워크 없이도 실행됩니다.</p>'
+          : '<p>주소를 복사한 뒤 Safari 주소창에 붙여 넣으세요. 메뉴에 <b>Safari 로 열기</b> 나 <b>다른 브라우저로 열기</b> 가 있으면 그것을 써도 됩니다.</p>' +
+            '<p class="guide-url">' + escapeHtml(appUrl()) + '</p>');
+      c.ok = kakao ? 'Safari 로 열기' : '주소 복사';
+      c.onOk = kakao
+        ? function () { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(appUrl()); }
+        : function () {
+            copyUrl().then(function (ok) {
+              toast(ok ? '주소를 복사했습니다. Safari 주소창에 붙여 넣으세요.' : '복사하지 못했습니다. 위 주소를 길게 눌러 복사하세요.', 4200);
+            });
+          };
+    } else if (kind === 'iosAddHome') {
+      c.title = '홈 화면에 추가하세요';
+      c.html = '<p>홈 화면에 추가하면 아이콘으로 바로 실행되고, 네트워크 없이도 동작합니다.</p>' +
+        '<ol class="steps">' +
+        '<li><span class="no">1</span><span>' + ICON_SHARE + ' <b>공유</b> 버튼을 누릅니다. ' +
+          (env.iosSafari ? '(아이폰은 아래쪽, 아이패드는 위쪽. 보이지 않으면 <b>⋯</b> 메뉴 안에 있습니다)'
+                         : '(주소창 옆 또는 <b>⋯</b> 메뉴 안에 있습니다)') + '</span></li>' +
+        '<li><span class="no">2</span><span>목록을 올려 ' + ICON_ADD + ' <b>홈 화면에 추가</b> 를 누릅니다.</span></li>' +
+        '<li><span class="no">3</span><span>오른쪽 위 <b>추가</b> 를 누르면 끝입니다. (<b>웹 앱으로 열기</b> 가 보이면 켠 상태로 둡니다)</span></li>' +
+        '</ol>';
+      c.ok = '알겠습니다';
+      c.cancel = null;
+    } else {
+      return;
+    }
+    guideTitle.textContent = c.title;
+    guideText.innerHTML = c.html;
+    guideOk.textContent = c.ok;
+    guideCancel.hidden = !c.cancel;
+    guideCancel.textContent = c.cancel || '';
+    guideOnOk = c.onOk;
+    guideKindShown = kind;
+    guideMute.checked = isGuideOff(kind);
+    if (dlg.open) dlg.close();
+    if (guide.showModal) guide.showModal(); else guide.setAttribute('open', '');
+  }
+  guide.addEventListener('click', function (e) { if (e.target === guide) closeGuide(); }); // 바깥 클릭 시 닫기
+
+  /** 실행마다 한 번만 자동으로 띄운다 (닫으면 같은 실행 중에는 다시 안 뜸) */
+  var autoShown = false;
+  function autoGuide(kind) {
+    if (autoShown || !kind || isGuideOff(kind)) return;
+    autoShown = true;
+    setTimeout(function () { if (!dlg.open && !guide.open) showGuide(kind); }, GUIDE_DELAY_MS);
+  }
+
   var installBtn = document.getElementById('installBtn');
   var deferredPrompt = null;
+  function updateInstallBtn() {
+    installBtn.hidden = !(deferredPrompt || guideKind());
+  }
+  function promptInstall() {
+    if (!deferredPrompt) {
+      toast('브라우저 메뉴의 "앱 설치" 를 이용하세요', 4200);
+      return;
+    }
+    var p = deferredPrompt;
+    deferredPrompt = null;
+    p.prompt();
+    p.userChoice.then(function () { updateInstallBtn(); }, function () { updateInstallBtn(); });
+  }
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
-    installBtn.hidden = false;
+    updateInstallBtn();
+    // Android 에서 Chrome 전환 안내 대상이 아니면(Chrome 등) 설치 창을 자동으로 묻는다
+    if (env.isAndroid && !env.standalone && !guideKind()) autoGuide('install');
   });
+  // 헤더 '앱 설치': 설치 창이 가능하면 설치, 아니면 해당 환경의 안내를 다시 보여 준다
   installBtn.addEventListener('click', function () {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(function () { deferredPrompt = null; installBtn.hidden = true; });
+    if (deferredPrompt) promptInstall();
+    else showGuide(guideKind());
   });
-  window.addEventListener('appinstalled', function () { installBtn.hidden = true; toast('설치되었습니다'); });
+  window.addEventListener('appinstalled', function () {
+    deferredPrompt = null;
+    installBtn.hidden = true;
+    closeGuide();
+    toast('설치되었습니다');
+  });
+  updateInstallBtn();
+  autoGuide(guideKind());
 
   // 서비스 워커: http(s) 에서만 동작 (file:// 로 열면 건너뜀)
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
