@@ -68,16 +68,28 @@
         window.__yonderInstallEvent = null;
       });
     </script>
-    <script type="module" crossorigin src="./assets/index-Dv4KQ9dM.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-B_SG2thi.css">
+    <script type="module" crossorigin src="./assets/index-BD7RKYqf.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BhcslDke.css">
   </head>
   <body>
     <div id="app">
       <header class="topbar">
-        <!-- 버전·빌드 번호는 main.js 가 채운다. (src/version.js 가 권위 있는 출처) -->
-        <h1 class="topbar__title">
-          <span class="topbar__name" data-el="app-name">여긴어디, Yonder</span>
-          <span class="topbar__meta" data-el="app-meta"></span>
+        <!--
+          버전·빌드 번호는 main.js 가 채운다. (src/version.js 가 권위 있는 출처)
+          폭이 모자라면 main.js 가 ", Yonder" → "(Build N)" 순으로 조각을 감춘다.
+            여긴어디, Yonder v1.2.0 (Build 19)
+            여긴어디 v1.2.0 (Build 19)
+            여긴어디 v1.2.0
+        -->
+        <h1 class="topbar__title" data-el="title">
+          <span class="topbar__name"
+            ><span data-el="app-name-ko">여긴어디</span
+            ><span data-el="app-name-en">, Yonder</span></span
+          >
+          <span class="topbar__meta"
+            ><span data-el="app-version"></span
+            ><span data-el="app-build"></span></span
+          >
         </h1>
         <div class="topbar__actions">
           <!-- 설치할 수 있거나 안내가 필요한 환경에서만 main.js 가 보이게 한다. -->
@@ -85,9 +97,46 @@
             type="button"
             class="button button--accent topbar__install"
             data-el="install-button"
+            aria-label="앱 설치"
+            title="앱 설치"
             hidden
           >
-            앱 설치
+            <span class="topbar__install-icon" aria-hidden="true">⤓</span>
+            <span class="topbar__install-label">앱 설치</span>
+          </button>
+          <!--
+            이력·설정은 상단 아이콘으로 들어간다. 현재위치가 기본 화면이며,
+            보조 화면에서 같은 아이콘이나 뒤로가기를 누르면 기본 화면으로 돌아온다.
+          -->
+          <button
+            type="button"
+            class="icon-button nav-button"
+            data-view="history"
+            aria-label="이동 이력"
+            title="이동 이력"
+            aria-pressed="false"
+          >
+            <svg class="nav-button__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M3 3.5v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="icon-button nav-button"
+            data-view="settings"
+            aria-label="설정"
+            title="설정"
+            aria-pressed="false"
+          >
+            <svg class="nav-button__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+              />
+            </svg>
           </button>
           <button
             type="button"
@@ -106,18 +155,6 @@
         <section class="view" id="view-history" aria-label="이동 이력" hidden></section>
         <section class="view" id="view-settings" aria-label="설정" hidden></section>
       </main>
-
-      <nav class="tabbar" aria-label="화면 이동">
-        <button type="button" class="tabbar__button" data-view="main" aria-selected="true">
-          현재위치
-        </button>
-        <button type="button" class="tabbar__button" data-view="history" aria-selected="false">
-          이력
-        </button>
-        <button type="button" class="tabbar__button" data-view="settings" aria-selected="false">
-          설정
-        </button>
-      </nav>
     </div>
 
   </body>
