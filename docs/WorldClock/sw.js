@@ -1,7 +1,10 @@
 // 세계 시계 서비스 워커 - 설치 시 모든 파일을 캐시해 오프라인 실행을 지원합니다.
 // 파일을 수정해 배포할 때는 CACHE 이름의 버전을 올려야 기존 캐시가 교체됩니다.
 // CACHE 는 index.html 의 APP_VERSION 과 묶여 있으므로 09_ChangeVersionName.py 로 함께 바꿉니다.
-const CACHE = 'worldclock-v1.0.1';
+//
+// Author : 허창원 (Changwon Heo)
+// Copyright (c) 2026 허창원. All rights reserved.
+const CACHE = 'worldclock-v1.1.0';
 const ASSETS = [
   './',
   './index.html',

@@ -1,10 +1,16 @@
 <!DOCTYPE html>
+<!--
+  세계 시계 (WorldClock)
+  Author : 허창원 (Changwon Heo)
+  Copyright (c) 2026 허창원. All rights reserved.
+-->
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>세계 시계</title>
 <meta name="description" content="여러 도시의 현재 시각을 아날로그·디지털 시계로 한눈에 보여주는 세계 시계">
+<meta name="author" content="허창원 (Changwon Heo)">
 <meta name="theme-color" content="#161e3a" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f3f4f8" media="(prefers-color-scheme: light)">
 <link rel="manifest" href="manifest.webmanifest">
@@ -85,15 +91,16 @@
   .brand img { width: 40px; height: 40px; border-radius: 10px; flex: none; }
   .brand h1 { font-size: 22px; line-height: 1.2; margin: 0; letter-spacing: -.02em; }
   .brand p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
-  /* 버전 배지 - 값은 APP_VERSION 에서 채운다 (단일 출처) */
+  /* 버전 배지 - 값은 APP_VERSION 에서 채운다 (단일 출처), 누르면 앱 정보 창 */
   .brand .ver {
     display: inline-block; vertical-align: middle; margin-left: 6px;
     padding: 1px 7px; border-radius: 999px;
     background: var(--surface-2); border: 1px solid var(--line); color: var(--muted);
-    font-size: 11.5px; font-weight: 700; line-height: 1.5; letter-spacing: 0;
-    white-space: nowrap; font-variant-numeric: tabular-nums;
+    font: inherit; font-size: 11.5px; font-weight: 700; line-height: 1.5; letter-spacing: 0;
+    white-space: nowrap; font-variant-numeric: tabular-nums; cursor: pointer;
   }
-  .brand .ver:empty { display: none; }
+  .brand .ver:hover, .brand .ver:focus-visible { color: var(--text); border-color: var(--primary); outline: none; }
+  .brand .ver svg { width: 12px; height: 12px; margin-left: 3px; vertical-align: -1.5px; }   /* ⓘ - 누를 수 있다는 표시 */
 
   .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -248,6 +255,13 @@
   .guide-mute input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); }
   .guide-btns { display: flex; gap: 8px; margin-left: auto; }   /* 좁으면 버튼 묶음째 다음 줄로 */
 
+  /* ---------- 앱 정보 대화상자 (설치 안내 창 스타일 재사용) ---------- */
+  dialog.about { width: min(360px, calc(100vw - 32px)); }
+  .about-info { margin: 4px 0 6px; display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; font-size: 14.5px; }
+  .about-info dt { color: var(--muted); }
+  .about-info dd { margin: 0; word-break: break-all; font-variant-numeric: tabular-nums; }
+  .about-mail { -webkit-user-select: all; user-select: all; }   /* 한 번에 선택해 복사 */
+
   .toast {
     position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
     transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none;
@@ -284,7 +298,7 @@
     <div class="brand">
       <img src="icons/icon-192.png" alt="">
       <div>
-        <h1>세계 시계<span class="ver" id="appVer"></span></h1>
+        <h1>세계 시계<button type="button" class="ver" id="appVer" aria-label="앱 정보" title="앱 정보"><span id="appVerText"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg></button></h1>
         <p id="localInfo">내 시간대</p>
       </div>
     </div>
@@ -336,6 +350,22 @@
   </div>
 </dialog>
 
+<dialog id="about" class="guide about" aria-label="앱 정보">
+  <div class="guide-body">
+    <dl class="about-info">
+      <dt>만든 사람</dt><dd>허창원</dd>
+      <dt>연락처</dt><dd class="about-mail" id="aboutMail"></dd>
+      <dt>빌드 날짜</dt><dd id="aboutBuild"></dd>
+    </dl>
+  </div>
+  <div class="guide-actions">
+    <div class="guide-btns">
+      <button type="button" class="btn" id="aboutUpdate">업데이트 확인</button>
+      <button type="button" class="btn primary" id="aboutClose">닫기</button>
+    </div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -343,7 +373,9 @@
   'use strict';
 
   // 앱 버전 - 09_ChangeVersionName.py 로 sw.js CACHE 와 함께 변경한다
-  var APP_VERSION = '1.0.1';
+  var APP_VERSION = '1.1.0';
+  // 빌드 날짜 - 09_ChangeVersionName.py 가 버전을 바꿀 때 실행한 날짜로 함께 바꾼다
+  var BUILD_DATE = '2026-10-03';
 
   var MAX = 10, MIN = 1;
   var KEY_CITIES = 'worldclock.cities.v1';
@@ -1081,7 +1113,43 @@
     });
   }
 
-  document.getElementById('appVer').textContent = 'v' + APP_VERSION;   // 헤더 버전 배지
+  // 앱 정보 창 - 헤더 버전 배지를 누르면 연다
+  var about = document.getElementById('about');
+  var appVer = document.getElementById('appVer');
+  function closeAbout() { if (about.open) about.close(); }
+  appVer.addEventListener('click', function () {
+    if (dlg.open) dlg.close();
+    closeGuide();
+    if (about.showModal) about.showModal(); else about.setAttribute('open', '');
+  });
+  document.getElementById('aboutClose').addEventListener('click', closeAbout);
+  about.addEventListener('click', function (e) { if (e.target === about) closeAbout(); }); // 바깥 클릭 시 닫기
+
+  // 이메일은 HTML 원문에 통째로 두지 않고 실행 중에 조립한다 (주소 수집 봇 대비)
+  document.getElementById('aboutMail').textContent = ['changwon.heo', 'gmail.com'].join('@');
+  document.getElementById('aboutBuild').textContent = BUILD_DATE;
+
+  // 업데이트 확인 - 서버의 sw.js 가 바뀌었으면 새 버전을 받아 다시 연다
+  // (sw.js 가 skipWaiting + clients.claim 이므로 설치되면 곧바로 controllerchange 가 온다)
+  document.getElementById('aboutUpdate').addEventListener('click', function () {
+    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) {
+      toast('이 실행 방식에서는 업데이트를 확인할 수 없습니다'); return;
+    }
+    if (navigator.onLine === false) { toast('오프라인 상태입니다'); return; }
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg) { toast('최신 버전입니다 (v' + APP_VERSION + ')'); return; }
+      return reg.update().then(function () {
+        if (reg.installing || reg.waiting) {
+          navigator.serviceWorker.addEventListener('controllerchange', function () { location.reload(); });
+          toast('새 버전을 받는 중입니다…', 4000);
+        } else {
+          toast('최신 버전입니다 (v' + APP_VERSION + ')');
+        }
+      });
+    }).catch(function () { toast('업데이트를 확인하지 못했습니다'); });
+  });
+
+  document.getElementById('appVerText').textContent = 'v' + APP_VERSION;   // 헤더 버전 배지
   fmt12.setAttribute('aria-pressed', String(hour12));
   fmt24.setAttribute('aria-pressed', String(!hour12));
   render();
