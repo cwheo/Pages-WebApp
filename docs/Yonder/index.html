@@ -68,8 +68,8 @@
         window.__yonderInstallEvent = null;
       });
     </script>
-    <script type="module" crossorigin src="./assets/index-CA7c7Bu1.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-8Wa1GayZ.css">
+    <script type="module" crossorigin src="./assets/index-Dv4KQ9dM.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-B_SG2thi.css">
   </head>
   <body>
     <div id="app">
@@ -79,15 +79,26 @@
           <span class="topbar__name" data-el="app-name">여긴어디, Yonder</span>
           <span class="topbar__meta" data-el="app-meta"></span>
         </h1>
-        <button
-          type="button"
-          class="icon-button"
-          data-el="theme-toggle"
-          aria-label="밝게/어둡게 전환"
-          title="밝게/어둡게 전환"
-        >
-          ☾
-        </button>
+        <div class="topbar__actions">
+          <!-- 설치할 수 있거나 안내가 필요한 환경에서만 main.js 가 보이게 한다. -->
+          <button
+            type="button"
+            class="button button--accent topbar__install"
+            data-el="install-button"
+            hidden
+          >
+            앱 설치
+          </button>
+          <button
+            type="button"
+            class="icon-button"
+            data-el="theme-toggle"
+            aria-label="밝게/어둡게 전환"
+            title="밝게/어둡게 전환"
+          >
+            ☾
+          </button>
+        </div>
       </header>
 
       <main class="views">
