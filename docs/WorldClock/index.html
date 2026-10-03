@@ -261,6 +261,13 @@
   .about-info dt { color: var(--muted); }
   .about-info dd { margin: 0; word-break: break-all; font-variant-numeric: tabular-nums; }
   .about-mail { -webkit-user-select: all; user-select: all; }   /* 한 번에 선택해 복사 */
+  /* 업데이트 확인 결과 - 모달 위에 뜨는 창이라 토스트 대신 창 안에 표시 */
+  .about-status {
+    margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+    background: var(--bg); border-left: 4px solid var(--primary);
+    font-size: 14.5px; font-weight: 600; line-height: 1.45;
+  }
+  .about-status.error { border-left-color: var(--danger); color: var(--danger); }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
@@ -355,8 +362,9 @@
     <dl class="about-info">
       <dt>만든 사람</dt><dd>허창원</dd>
       <dt>연락처</dt><dd class="about-mail" id="aboutMail"></dd>
-      <dt>빌드 날짜</dt><dd id="aboutBuild"></dd>
+      <dt>빌드 일시</dt><dd id="aboutBuild"></dd>
     </dl>
+    <p class="about-status" id="aboutStatus" role="status" hidden></p>
   </div>
   <div class="guide-actions">
     <div class="guide-btns">
@@ -374,8 +382,8 @@
 
   // 앱 버전 - 09_ChangeVersionName.py 로 sw.js CACHE 와 함께 변경한다
   var APP_VERSION = '1.1.1';
-  // 빌드 날짜 - 09_ChangeVersionName.py 가 버전을 바꿀 때 실행한 날짜로 함께 바꾼다
-  var BUILD_DATE = '2026-10-03';
+  // 빌드 일시 - 09_ChangeVersionName.py 가 버전을 바꿀 때 실행한 일시로 함께 바꾼다
+  var BUILD_DATE = '2026-10-03 19:49:46';
 
   var MAX = 10, MIN = 1;
   var KEY_CITIES = 'worldclock.cities.v1';
@@ -1116,10 +1124,18 @@
   // 앱 정보 창 - 헤더 버전 배지를 누르면 연다
   var about = document.getElementById('about');
   var appVer = document.getElementById('appVer');
+  var aboutStatus = document.getElementById('aboutStatus');
   function closeAbout() { if (about.open) about.close(); }
+  // 모달 창은 페이지 토스트를 덮어 흐리게 만들므로, 결과는 창 안에 뚜렷하게 표시한다
+  function aboutMsg(msg, isError) {
+    aboutStatus.textContent = msg;
+    aboutStatus.classList.toggle('error', !!isError);
+    aboutStatus.hidden = false;
+  }
   appVer.addEventListener('click', function () {
     if (dlg.open) dlg.close();
     closeGuide();
+    aboutStatus.hidden = true;   // 다시 열 때는 이전 결과를 지운다
     if (about.showModal) about.showModal(); else about.setAttribute('open', '');
   });
   document.getElementById('aboutClose').addEventListener('click', closeAbout);
@@ -1133,20 +1149,21 @@
   // (sw.js 가 skipWaiting + clients.claim 이므로 설치되면 곧바로 controllerchange 가 온다)
   document.getElementById('aboutUpdate').addEventListener('click', function () {
     if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) {
-      toast('이 실행 방식에서는 업데이트를 확인할 수 없습니다'); return;
+      aboutMsg('이 실행 방식에서는 업데이트를 확인할 수 없습니다', true); return;
     }
-    if (navigator.onLine === false) { toast('오프라인 상태입니다'); return; }
+    if (navigator.onLine === false) { aboutMsg('오프라인 상태입니다', true); return; }
+    aboutMsg('업데이트를 확인하는 중입니다…');
     navigator.serviceWorker.getRegistration().then(function (reg) {
-      if (!reg) { toast('최신 버전입니다 (v' + APP_VERSION + ')'); return; }
+      if (!reg) { aboutMsg('최신 버전입니다 (v' + APP_VERSION + ')'); return; }
       return reg.update().then(function () {
         if (reg.installing || reg.waiting) {
           navigator.serviceWorker.addEventListener('controllerchange', function () { location.reload(); });
-          toast('새 버전을 받는 중입니다…', 4000);
+          aboutMsg('새 버전을 받는 중입니다… 잠시 후 다시 열립니다');
         } else {
-          toast('최신 버전입니다 (v' + APP_VERSION + ')');
+          aboutMsg('최신 버전입니다 (v' + APP_VERSION + ')');
         }
       });
-    }).catch(function () { toast('업데이트를 확인하지 못했습니다'); });
+    }).catch(function () { aboutMsg('업데이트를 확인하지 못했습니다', true); });
   });
 
   document.getElementById('appVerText').textContent = 'v' + APP_VERSION;   // 헤더 버전 배지
