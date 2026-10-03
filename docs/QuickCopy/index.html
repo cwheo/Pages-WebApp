@@ -1,10 +1,16 @@
 <!DOCTYPE html>
+<!--
+  QuickCopy — 자주 쓰는 문구를 저장하고 한 번에 복사하는 앱
+  Author : 허창원 (Changwon Heo)
+  Copyright (c) 2026 허창원. All rights reserved.
+-->
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <title>QuickCopy</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="자주 쓰는 문구를 저장하고 한 번에 복사하는 앱">
+<meta name="author" content="허창원 (Changwon Heo)">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#4f46e5">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -96,6 +102,9 @@ html[data-theme="dark"] {
    2. 기본 요소
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; }
+/* hidden 속성이 display 를 지정한 규칙(.pillbtn · .btn 등)에 지지 않게 한다.
+   빠뜨리면 '앱 설치' 버튼이나 안내 창의 숨긴 버튼이 그대로 보인다 (설치 가이드 9장) */
+[hidden] { display: none !important; }
 
 html, body { margin: 0; padding: 0; }
 
@@ -947,6 +956,56 @@ ul.fine b, .sheet .fine b { color: var(--text); font-weight: 700; }
 .empty-inline[hidden] { display: none; }
 .btnrow.center { justify-content: center; }
 
+/* 앱 정보 — 제목(앱명 · 버전 · 빌드) + 만든 사람 · 연락처 */
+.about-build { white-space: nowrap; color: var(--text-muted); font-weight: 600; }   /* 좁으면 (Build: …) 를 통째로 다음 줄로 */
+.about-info {
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 14px;
+  margin: 0 0 14px; padding: 0 0 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14.5px;
+}
+.about-info dt { color: var(--text-muted); }
+.about-info dd { margin: 0; word-break: break-all; }
+.about-mail { -webkit-user-select: all; user-select: all; }   /* 한 번에 선택해 복사 */
+
+/* 설치 안내 */
+.guide-text p { margin: 0 0 10px; color: var(--text); line-height: 1.55; }
+.guide-url {
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px !important;
+  word-break: break-all;
+  -webkit-user-select: all; user-select: all;
+}
+.steps { list-style: none; margin: 4px 0 10px; padding: 0; display: grid; gap: 10px; }
+.steps li { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; line-height: 1.5; }
+.steps .no {
+  flex: none;
+  width: 22px; height: 22px; margin-top: 1px;
+  display: inline-grid; place-items: center;
+  border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 700;
+}
+html[data-theme="dark"] .steps .no { color: #10131a; }
+.steps .ic { width: 17px; height: 17px; vertical-align: -3px; color: var(--accent); }
+/* 좁은 화면(~360px)에서 체크박스와 버튼 둘이 한 줄에 안 들어가면 버튼 묶음째 다음 줄로 */
+.guide-actions {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+  gap: 10px 8px; margin-top: 14px;
+}
+.guide-mute {
+  margin-right: auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: var(--tap);
+  font-size: 13px; color: var(--text-muted);
+  cursor: pointer; -webkit-user-select: none; user-select: none;
+}
+.guide-mute input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.guide-btns { display: flex; gap: 8px; margin-left: auto; }
+
 .rows { display: grid; gap: 8px; margin: 0 0 4px; }
 .rows dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
 .rows dt { color: var(--text-muted); }
@@ -1081,7 +1140,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7.4 10.4 12 15l4.6-4.6M4.5 19.5h15"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15.5V4.5M7.4 9.1 12 4.5l4.6 4.6M4.5 19.5h15"/></symbol>
   <symbol id="i-install" viewBox="0 0 24 24"><rect x="6.5" y="2.8" width="11" height="18.4" rx="2.4"/><path d="M12 7.5v6.5M9.4 11.4 12 14l2.6-2.6"/></symbol>
-  <symbol id="i-share-ios" viewBox="0 0 24 24"><path d="M12 3.4v10M8.6 6.8 12 3.4l3.4 3.4"/><path d="M7 10.5H5.6A1.6 1.6 0 0 0 4 12.1v7.3a1.6 1.6 0 0 0 1.6 1.6h12.8a1.6 1.6 0 0 0 1.6-1.6v-7.3a1.6 1.6 0 0 0-1.6-1.6H17"/></symbol>
+  <symbol id="i-addhome" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="i-share-ios"viewBox="0 0 24 24"><path d="M12 3.4v10M8.6 6.8 12 3.4l3.4 3.4"/><path d="M7 10.5H5.6A1.6 1.6 0 0 0 4 12.1v7.3a1.6 1.6 0 0 0 1.6 1.6h12.8a1.6 1.6 0 0 0 1.6-1.6v-7.3a1.6 1.6 0 0 0-1.6-1.6H17"/></symbol>
   <symbol id="i-undo" viewBox="0 0 24 24"><path d="M4 9h10.5A5.5 5.5 0 1 1 14.5 20H8"/><path d="M7.6 5.2 3.8 9l3.8 3.8"/></symbol>
   <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.8 3.6h10.4v16.8L12 16.4l-5.2 4z"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.6 6.6a1.8 1.8 0 0 1 1.8-1.8h3.4l1.9 2.4h7.9a1.8 1.8 0 0 1 1.8 1.8v8.6a1.8 1.8 0 0 1-1.8 1.8H5.4a1.8 1.8 0 0 1-1.8-1.8z"/></symbol>
@@ -1104,7 +1164,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
       <div class="hdr-actions">
         <!-- 좁은 화면에서는 라벨이 숨으므로 aria-label 로 이름을 보장한다 -->
         <button type="button" id="btnInstall" class="pillbtn" aria-label="앱 설치" title="앱 설치" hidden>
-          <svg class="ic" aria-hidden="true"><use href="#i-install"/></svg><span>설치</span>
+          <svg class="ic" aria-hidden="true"><use href="#i-install"/></svg><span>앱 설치</span>
         </button>
         <button type="button" id="btnSearch" class="iconbtn" aria-label="검색" aria-expanded="false" title="검색 (/)">
           <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
@@ -1139,14 +1199,6 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   <div class="banner warn" id="bnStorage" hidden>
     <svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg>
     <p><b>저장할 수 없는 환경입니다.</b><br>사생활 보호(시크릿) 모드이거나 브라우저가 저장을 차단하고 있습니다. 창을 닫으면 문구가 사라집니다.</p>
-  </div>
-
-  <div class="banner" id="bnIos" hidden>
-    <svg class="ic" aria-hidden="true"><use href="#i-share-ios"/></svg>
-    <p><b>홈 화면에 추가하기</b><br>하단 <b>공유</b> 버튼 → <b>홈 화면에 추가</b> 를 누르면 앱처럼 설치되고, 네트워크 없이도 실행됩니다.</p>
-    <button type="button" id="bnIosClose" class="iconbtn" aria-label="안내 닫기">
-      <svg class="ic" aria-hidden="true"><use href="#i-close"/></svg>
-    </button>
   </div>
 
   <p class="hint" id="sortHint" hidden>
@@ -1371,11 +1423,32 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 <!-- 앱 정보 -->
 <div class="scrim" id="aboutScrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <!-- 제목 = 앱명 · 버전 · 빌드 일시 (openAbout 이 채운다). 예: QuickCopy v1.4.1 (Build: 2026-10-03 21:40) -->
     <h2 id="aboutTitle">앱 정보</h2>
+    <dl class="about-info">
+      <dt>만든 사람</dt><dd>허창원</dd>
+      <!-- 이메일은 원문에 통째로 두지 않고 실행 중에 조립한다 (주소 수집 봇 대비) -->
+      <dt>연락처</dt><dd class="about-mail" id="aboutMail"></dd>
+    </dl>
     <div class="rows"><dl id="aboutRows"></dl></div>
     <p style="margin-top:14px">자주 쓰는 문구를 저장하고 한 번의 탭으로 복사하는 앱입니다. 모든 데이터는 이 기기의 브라우저에만 저장되며 어디로도 전송되지 않습니다.</p>
     <div class="btnrow">
       <button type="button" class="btn" id="aboutClose">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설치 안내 — Chrome/Safari 로 열기 · 홈 화면 추가 절차 · 설치 확인 (showGuide 가 내용을 채운다) -->
+<div class="scrim" id="guideScrim" hidden>
+  <div class="sheet guide" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+    <h2 id="guideTitle"></h2>
+    <div class="guide-text" id="guideText"></div>
+    <div class="guide-actions">
+      <label class="guide-mute"><input type="checkbox" id="guideMute"> 다시 보지 않기</label>
+      <div class="guide-btns">
+        <button type="button" class="btn" id="guideCancel"></button>
+        <button type="button" class="btn primary" id="guideOk"></button>
+      </div>
     </div>
   </div>
 </div>
@@ -1402,7 +1475,9 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.4.0';
+  var APP_VERSION = '1.4.1';
+  // 빌드 일시 — 09_ChangeVersionName.py 가 버전을 바꿀 때 실행한 일시로 함께 바꾼다 (앱 정보 창 제목)
+  var BUILD_DATE = '2026-10-03 22:06:56';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 4;                 // 4 = 제목(title)·카드 표시(show) (3 = color, 2 = groups, 1 = 그룹 없음)
@@ -1485,7 +1560,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
    * - group      : 마지막으로 보고 있던 그룹 ('all' | 'none' | 그룹 id)
    * - cols       : 목록 열 수 상한 ('auto' | 1~4). 실제 열 수는 창 폭으로 한 번 더 줄인다
    */
-  var pref = { theme: 'system', iosHintDone: false, keepScroll: true, scrolls: {}, group: 'all', exportName: '', cols: 'auto' };
+  var pref = { theme: 'system', keepScroll: true, scrolls: {}, group: 'all', exportName: '', cols: 'auto',
+               noChrome: false, guideOff: {} };
   var prefLegacyMigrated = false;    // 옛 단일 pref.scroll 을 옮겼는지
   /** 화면 상태 — group 은 'all' | 'none'(미분류) | 그룹 id */
   var ui = { query: '', searchOpen: false, group: 'all' };
@@ -1606,8 +1682,6 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     foot: $('foot'),
     sortHint: $('sortHint'),
     bnStorage: $('bnStorage'),
-    bnIos: $('bnIos'),
-    bnIosClose: $('bnIosClose'),
     btnAdd: $('btnAdd'),
     btnSearch: $('btnSearch'),
     btnTheme: $('btnTheme'),
@@ -1676,7 +1750,15 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     askBody: $('askBody'),
     askBtns: $('askBtns'),
     aboutScrim: $('aboutScrim'),
+    aboutTitle: $('aboutTitle'),
     aboutRows: $('aboutRows'),
+    aboutMail: $('aboutMail'),
+    guideScrim: $('guideScrim'),
+    guideTitle: $('guideTitle'),
+    guideText: $('guideText'),
+    guideMute: $('guideMute'),
+    guideOk: $('guideOk'),
+    guideCancel: $('guideCancel'),
     aboutClose: $('aboutClose'),
     manualScrim: $('manualScrim'),
     manualText: $('manualText'),
@@ -1882,7 +1964,12 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
       var p = JSON.parse(raw);
       if (p && typeof p === 'object') {
         if (p.theme === 'light' || p.theme === 'dark' || p.theme === 'system') pref.theme = p.theme;
-        pref.iosHintDone = !!p.iosHintDone;
+        // 설치 안내 — Chrome 미설치 기록 · '다시 보지 않기' 한 안내 종류 (v1.4.1).
+        // 옛 iosHintDone(iOS 안내 배너)은 설치 안내 창으로 대체되어 읽지 않는다
+        pref.noChrome = p.noChrome === true;
+        if (p.guideOff && typeof p.guideOff === 'object' && !Array.isArray(p.guideOff)) {
+          Object.keys(p.guideOff).forEach(function (k) { if (p.guideOff[k] === true) pref.guideOff[k] = true; });
+        }
         if (typeof p.keepScroll === 'boolean') pref.keepScroll = p.keepScroll;
         if (typeof p.group === 'string' && p.group) pref.group = p.group;
         // 목록 열 수 — 'auto' 또는 1~4. 그 밖의 값은 무시하고 기본값(자동)을 쓴다
@@ -2783,12 +2870,13 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   function anyScrimOpen() {
     return !E.editScrim.hidden || !E.askScrim.hidden || !E.aboutScrim.hidden ||
            !E.manualScrim.hidden || !E.groupScrim.hidden || !E.promptScrim.hidden ||
-           !E.tokensScrim.hidden;
+           !E.tokensScrim.hidden || !E.guideScrim.hidden;
   }
 
   /** 겹쳐 열렸을 때 위에 있는 것 — Esc·Tab 트랩·배경 클릭이 이것을 대상으로 한다 */
   function topScrim() {
     if (!E.manualScrim.hidden) return E.manualScrim;
+    if (!E.guideScrim.hidden) return E.guideScrim;        // 다른 창이 없을 때만 열린다
     if (!E.promptScrim.hidden) return E.promptScrim;      // 그룹 관리 위에 열린다
     if (!E.askScrim.hidden) return E.askScrim;
     if (!E.tokensScrim.hidden) return E.tokensScrim;      // 편집 모달 위에 열린다
@@ -4123,6 +4211,13 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
      15. 앱 정보
      ========================================================== */
   function openAbout() {
+    // 제목 = 앱명 · 버전 · 빌드 일시(분까지). 예: QuickCopy v1.4.1 (Build: 2026-10-03 21:40)
+    // 좁은 화면에서 줄이 넘어가면 (Build: …) 가 통째로 다음 줄로 간다 (.about-build 줄바꿈 금지)
+    E.aboutTitle.textContent = 'QuickCopy v' + APP_VERSION + ' ';
+    E.aboutTitle.appendChild(el('span', 'about-build', '(Build: ' + BUILD_DATE.slice(0, 16) + ')'));
+    // 이메일은 HTML 원문에 통째로 두지 않고 실행 중에 조립한다 (주소 수집 봇 대비)
+    E.aboutMail.textContent = ['changwon.heo', 'gmail.com'].join('@');
+
     var rows = E.aboutRows;
     while (rows.firstChild) rows.removeChild(rows.firstChild);
     function add(k, v) {
@@ -4139,7 +4234,6 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
       ? (navigator.serviceWorker.controller ? '활성 (오프라인 사용 가능)' : '미활성')
       : '미지원';
 
-    add('앱', 'QuickCopy ' + APP_VERSION);
     add('저장된 문구', state.items.length + '개');
     add('그룹', state.groups.length === 0
       ? '없음 (전부 미분류)'
@@ -4193,7 +4287,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 
   // 스크림 바깥(배경) 클릭으로 닫기
   [E.editScrim, E.askScrim, E.aboutScrim, E.manualScrim, E.groupScrim, E.promptScrim,
-   E.tokensScrim].forEach(function (scrim) {
+   E.tokensScrim, E.guideScrim].forEach(function (scrim) {
     scrim.addEventListener('pointerdown', function (ev) {
       if (ev.target !== scrim) return;
       if (scrim === E.askScrim) closeAsk(null);
@@ -4283,41 +4377,308 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     });
   }
 
+  /* ---------- 설치 (PWA) · 실행 환경 안내 (v1.4.1) ----------
+     목표는 홈 화면에 설치해 오프라인으로 쓰는 것이며, 플랫폼마다 설치 경로가 다르다.
+       Android : 설치를 제대로 지원하는 것은 Chrome. Chrome 이 아니면(카카오톡 등 인앱 웹뷰,
+                 삼성 인터넷 등) 실행할 때마다 Chrome 으로 열지 묻는다. Chrome 이 없는 기기로
+                 확인되면 더 묻지 않는다. Chrome 에서는 설치 가능해지면 설치 창을 묻는다.
+       iOS     : 설치 창을 띄울 API 가 없어 공유 → '홈 화면에 추가' 절차를 안내한다.
+                 Safari 와 iOS 16.4+ 의 Chrome·Edge 등은 추가 가능, 인앱 웹뷰는 불가 → Safari 로 유도.
+     이미 홈 화면 앱으로 실행 중이거나 file:// 로 열었으면 아무것도 묻지 않는다.
+     UA 판별은 취약하지만 인앱 웹뷰를 알아낼 표준 API 가 없다. 오탐이어도 안내 창이 뜨는 정도다.
+     (가이드: Template/Guidelines/WebApp/20260929_1042_WorldClock_GDLN_PWA_Install_Browser_Guide.md)
+     v1.4.0 까지의 iOS 안내 배너(#bnIos)는 이 안내 창으로 대체했다. */
+  var NO_CHROME_MARK = 'qcnochrome';   // intent fallback 주소 표식 (Chrome 미설치 감지)
+  var GUIDE_DELAY_MS = 800;            // 목록이 먼저 그려지도록 살짝 늦게 띄운다
+
+  var IN_APP = [
+    { re: /KAKAOTALK/i, label: '카카오톡', kakao: true },
+    { re: /NAVER\(inapp/i, label: '네이버 앱' },
+    { re: /\bLine\//i, label: '라인' },
+    { re: /\b(FBAN|FBAV|FB_IAB)\b/i, label: '페이스북' },
+    { re: /Instagram/i, label: '인스타그램' },
+    { re: /DaumApps|DaumDevice/i, label: '다음 앱' },
+    { re: /\bBAND\//i, label: '밴드' },
+    { re: /;\s*wv\)/i, label: '다른 앱' }   // Android 웹뷰 표식 (진짜 Chrome 에는 없음)
+  ];
+  // Chrome 계열이지만 Chrome 이 아닌 브라우저 — 인앱 → 타 브라우저 → Chrome 순으로 판별해야
+  // 카카오톡 · 삼성 인터넷이 Chrome 으로 오판되지 않는다 (이들 UA 에도 'Chrome/' 이 들어 있다)
+  var OTHER_BROWSERS = [
+    { re: /SamsungBrowser/i, label: '삼성 인터넷' },
+    { re: /Whale/i, label: '웨일' },
+    { re: /\b(EdgA|EdgiOS|Edg)\b/i, label: 'Edge' },
+    { re: /\b(OPR|OPT|OPiOS)\b/i, label: 'Opera' },
+    { re: /\b(FxiOS|Firefox)\b/i, label: 'Firefox' },
+    { re: /DuckDuckGo/i, label: 'DuckDuckGo' },
+    { re: /Brave/i, label: 'Brave' },
+    { re: /UCBrowser/i, label: 'UC 브라우저' },
+    { re: /MiuiBrowser/i, label: 'Mi 브라우저' },
+    { re: /HeyTapBrowser/i, label: 'HeyTap 브라우저' }
+  ];
+
+  function findUa(list, ua) {
+    for (var i = 0; i < list.length; i++) if (list[i].re.test(ua)) return list[i];
+    return null;
+  }
+  function detectStandalone() {
+    try {
+      if (matchMedia('(display-mode: standalone)').matches ||
+          matchMedia('(display-mode: fullscreen)').matches ||
+          matchMedia('(display-mode: minimal-ui)').matches) return true;
+    } catch (e) { /* matchMedia 미지원 */ }
+    return navigator.standalone === true;   // iOS Safari 비표준
+  }
+  function detectEnv() {
+    var ua = navigator.userAgent || '';
+    var inApp = findUa(IN_APP, ua);
+    var other = findUa(OTHER_BROWSERS, ua);
+    // iPadOS 13+ 는 데스크톱 Safari 로 위장하므로 터치 지원으로 가른다
+    var isIOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+    var isChrome = /Chrome\/|CriOS\//i.test(ua) && !inApp && !other;
+    // iOS 버전 (예: 'OS 16_4' → 1604). 데스크톱 위장 UA 는 버전이 없어 최신으로 간주
+    var m = ua.match(/OS (\d+)_(\d+)/);
+    var iosVer = !isIOS ? 0 : (m ? (+m[1]) * 100 + (+m[2]) : 9999);
+    var label = inApp ? inApp.label : other ? other.label : isChrome ? 'Chrome' : isIOS ? 'Safari' : '이 브라우저';
+    return {
+      isAndroid: /Android/i.test(ua),
+      isIOS: isIOS,
+      iosVer: iosVer,
+      standalone: detectStandalone(),
+      inApp: inApp,
+      isChrome: isChrome,
+      iosSafari: isIOS && !inApp && !isChrome && !other,
+      label: label
+    };
+  }
+  var env = detectEnv();
+  var webOk = /^https?:$/.test(location.protocol);
+
+  /**
+   * intent fallback 으로 되돌아왔으면(= Chrome 미설치) 기록하고 주소에서 표식을 지운다
+   * (북마크 · 공유 주소에 남지 않도록). ⚠ pref 를 쓰므로 loadPref() 뒤에 불러야 한다 —
+   * 앞에서 savePref() 하면 저장된 환경설정 전체가 기본값으로 덮인다.
+   */
+  function consumeNoChromeMark() {
+    try {
+      var params = new URLSearchParams(location.search);
+      if (!params.has(NO_CHROME_MARK)) return;
+      pref.noChrome = true;
+      savePref();
+      params.delete(NO_CHROME_MARK);
+      var q = params.toString();
+      history.replaceState(history.state, '', location.pathname + (q ? '?' + q : '') + location.hash);
+    } catch (e) { /* 무시 */ }
+  }
+
+  /** 이번 실행에서 보여줄 안내 종류. null 이면 안내 없음 */
+  function guideKind() {
+    if (!webOk || env.standalone) return null;
+    if (env.isIOS) {
+      if (env.inApp) return 'iosSafari';                          // 인앱 웹뷰는 추가 불가
+      if (env.iosSafari || env.iosVer >= 1604) return 'iosAddHome';
+      return 'iosSafari';                                         // 16.4 미만 타 브라우저
+    }
+    if (env.isAndroid && !env.isChrome && !pref.noChrome) return 'chrome';
+    return null;   // Android Chrome · 데스크톱은 beforeinstallprompt 를 기다린다
+  }
+
+  function appUrl() { return location.origin + location.pathname; }
+
+  /** 같은 주소를 Chrome 으로 연다 (Android). Chrome 이 없으면 표식 달린 fallback 주소가 현재 브라우저에 열린다 */
+  function openInChrome() {
+    var url = appUrl();
+    var fallback = url + '?' + NO_CHROME_MARK + '=1';
+    location.href = 'intent://' + url.replace(/^https?:\/\//, '') +
+      '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' +
+      encodeURIComponent(fallback) + ';end';
+    // 카카오톡은 intent 를 막는 버전이 있다 — 화면이 그대로면 외부 브라우저로 한 번 더 시도
+    if (env.inApp && env.inApp.kakao) {
+      setTimeout(function () {
+        if (!document.hidden) location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+      }, 1200);
+    }
+  }
+
+  /** 앱 주소 복사 — 결과(true/false)를 Promise 로. 실패하면 6절의 화면 밖 textarea 경로를 쓴다 */
+  function copyUrl() {
+    var url = appUrl();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(url).then(function () { return true; },
+                                                       function () { return legacyCopy(url); });
+      }
+    } catch (e) { /* 아래로 */ }
+    return Promise.resolve(legacyCopy(url));
+  }
+
+  /**
+   * 안내 문단을 DOM 으로 만든다 (innerHTML 금지 방침).
+   * 조각: 문자열 | { b: '굵게' } | { ic: '아이콘 이름' }
+   */
+  function appendParts(node, parts) {
+    parts.forEach(function (x) {
+      if (typeof x === 'string') node.appendChild(document.createTextNode(x));
+      else if (x.b != null) node.appendChild(el('b', null, x.b));
+      else if (x.ic) node.appendChild(ic(x.ic));
+    });
+    return node;
+  }
+  function para(parts, cls) { return appendParts(el('p', cls || null), parts); }
+  function stepList(items) {
+    var ol = el('ol', 'steps');
+    items.forEach(function (parts, i) {
+      var li = el('li');
+      li.appendChild(el('span', 'no', String(i + 1)));
+      li.appendChild(appendParts(el('span'), parts));
+      ol.appendChild(li);
+    });
+    return ol;
+  }
+
+  // 기기(브라우저)마다 저장소가 따로라서, 이미 설치한 뒤 카카오톡 · Safari 로 다시 열면
+  // 설치 여부를 알 수 없다. 그런 경우 반복 안내를 끄도록 안내 종류별로 기억한다(pref.guideOff).
+  // 헤더 '앱 설치' 버튼으로는 계속 열 수 있고, 거기서 체크를 풀면 자동 안내가 다시 켜진다.
+  var guideOnOk = null;
+  var guideKindShown = null;
+  function isGuideOff(kind) { return !!pref.guideOff[kind]; }
+  function setGuideOff(kind, off) {
+    if (off) pref.guideOff[kind] = true; else delete pref.guideOff[kind];
+    savePref();
+  }
+  function closeGuide() { if (!E.guideScrim.hidden) closeScrim(E.guideScrim); }
+
+  function showGuide(kind) {
+    var who = { b: env.label };
+    var c = { cancel: '그냥 보기', onOk: null, body: [] };
+    if (kind === 'chrome') {
+      c.title = 'Chrome 에서 열까요?';
+      c.body.push(para(env.inApp
+        ? ['지금은 ', who, ' 안의 브라우저로 열려 있어 홈 화면에 앱을 설치할 수 없습니다.']
+        : ['지금은 ', who, ' 에서 열려 있습니다.']));
+      c.body.push(para(['Chrome 에서 열면 홈 화면에 QuickCopy 를 설치할 수 있고, 설치 후에는 네트워크 없이도 실행됩니다.']));
+      c.ok = 'Chrome 으로 열기';
+      c.onOk = openInChrome;
+    } else if (kind === 'install') {
+      c.title = 'QuickCopy 를 설치할까요?';
+      c.body.push(para(['홈 화면에 아이콘이 추가되고, 주소창 없는 앱 화면으로 실행됩니다.']));
+      c.body.push(para(['설치 후에는 네트워크 없이도 동작합니다.']));
+      c.ok = '설치';
+      c.cancel = '나중에';
+      c.onOk = promptInstall;
+    } else if (kind === 'iosSafari') {
+      var kakao = env.inApp && env.inApp.kakao;
+      c.title = 'Safari 에서 열까요?';
+      c.body.push(para(['지금은 ', who, env.inApp ? ' 안의 브라우저로' : ' 에서',
+        ' 열려 있어 홈 화면에 추가할 수 없습니다. ', env.inApp ? '' : '이 iOS 버전에서는 ',
+        { b: 'Safari' }, ' 에서 홈 화면에 추가할 수 있습니다.']));
+      if (kakao) {
+        c.body.push(para(['Safari 로 열면 홈 화면에 QuickCopy 를 추가할 수 있고, 추가 후에는 네트워크 없이도 실행됩니다.']));
+      } else {
+        c.body.push(para(['주소를 복사한 뒤 Safari 주소창에 붙여 넣으세요. 메뉴에 ', { b: 'Safari 로 열기' },
+          ' 나 ', { b: '다른 브라우저로 열기' }, ' 가 있으면 그것을 써도 됩니다.']));
+        c.body.push(para([appUrl()], 'guide-url'));
+      }
+      c.ok = kakao ? 'Safari 로 열기' : '주소 복사';
+      c.onOk = kakao
+        ? function () { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(appUrl()); }
+        : function () {
+            copyUrl().then(function (ok) {
+              toast(ok ? '주소를 복사했습니다. Safari 주소창에 붙여 넣으세요.'
+                       : '복사하지 못했습니다. 위 주소를 길게 눌러 복사하세요.', { duration: 4200 });
+            });
+          };
+    } else if (kind === 'iosAddHome') {
+      c.title = '홈 화면에 추가하세요';
+      c.body.push(para(['홈 화면에 추가하면 아이콘으로 바로 실행되고, 네트워크 없이도 동작합니다.']));
+      c.body.push(stepList([
+        [{ ic: 'share-ios' }, ' ', { b: '공유' }, ' 버튼을 누릅니다. ',
+          env.iosSafari ? '(아이폰은 아래쪽, 아이패드는 위쪽. 보이지 않으면 ⋯ 메뉴 안에 있습니다)'
+                        : '(주소창 옆 또는 ⋯ 메뉴 안에 있습니다)'],
+        ['목록을 올려 ', { ic: 'addhome' }, ' ', { b: '홈 화면에 추가' }, ' 를 누릅니다.'],
+        ['오른쪽 위 ', { b: '추가' }, ' 를 누르면 끝입니다. (', { b: '웹 앱으로 열기' }, ' 가 보이면 켠 상태로 둡니다)']
+      ]));
+      c.ok = '알겠습니다';
+      c.cancel = null;
+    } else {
+      return;
+    }
+    // 문구는 브라우저 저장소에 있다 — 다른 브라우저 · 설치한 앱은 저장소가 따로일 수 있어 따라가지 않는다
+    if (kind !== 'install' && state.items.length > 0) {
+      c.body.push(para(['이 브라우저에 저장한 문구는 옮겨지지 않을 수 있습니다. 옮기려면 메뉴(⋮) → ',
+        { b: 'JSON 내보내기' }, ' 로 백업한 뒤 가져오세요.'], 'fine'));
+    }
+
+    E.guideTitle.textContent = c.title;
+    var box = E.guideText;
+    while (box.firstChild) box.removeChild(box.firstChild);
+    c.body.forEach(function (n) { box.appendChild(n); });
+    E.guideOk.textContent = c.ok;
+    E.guideCancel.hidden = !c.cancel;
+    E.guideCancel.textContent = c.cancel || '';
+    guideOnOk = c.onOk;
+    guideKindShown = kind;
+    E.guideMute.checked = isGuideOff(kind);
+    openScrim(E.guideScrim, E.guideOk);
+  }
+  // 체크를 바꾸는 즉시 저장 — 어떤 방법으로 닫든(버튼 · 바깥 클릭 · Esc · 다른 앱으로 전환) 유지된다
+  E.guideMute.addEventListener('change', function () {
+    if (guideKindShown) setGuideOff(guideKindShown, E.guideMute.checked);
+  });
+  // 확인 동작은 창을 닫은 뒤 실행한다 (Chrome 전환 등 다른 앱으로 넘어가는 동작 대비)
+  E.guideOk.addEventListener('click', function () { var fn = guideOnOk; closeGuide(); if (fn) fn(); });
+  E.guideCancel.addEventListener('click', closeGuide);
+
+  /** 실행마다 한 번만 자동으로 띄운다 (닫으면 같은 실행 중에는 다시 안 뜸). 다른 창이 열려 있으면 생략 */
+  var autoShown = false;
+  function autoGuide(kind) {
+    if (autoShown || !kind || isGuideOff(kind)) return;
+    autoShown = true;
+    setTimeout(function () { if (!anyScrimOpen()) showGuide(kind); }, GUIDE_DELAY_MS);
+  }
+
+  // 헤더 '앱 설치' 버튼 — 설치 창이 가능하거나(beforeinstallprompt) 안내 대상 환경일 때만 보인다
   var installPrompt = null;
+  function updateInstallBtn() {
+    E.btnInstall.hidden = !(installPrompt || guideKind());
+  }
+  function promptInstall() {
+    if (!installPrompt) {
+      toast('브라우저 메뉴의 "앱 설치" 를 이용하세요', { duration: 4200 });
+      return;
+    }
+    var p = installPrompt;
+    installPrompt = null;                      // prompt() 는 한 번만 쓸 수 있다
+    try {
+      p.prompt();
+      p.userChoice.then(updateInstallBtn, updateInstallBtn);
+    } catch (e) { updateInstallBtn(); }
+  }
   window.addEventListener('beforeinstallprompt', function (ev) {
     ev.preventDefault();
     installPrompt = ev;
-    E.btnInstall.hidden = false;
+    updateInstallBtn();
+    // Android 에서 Chrome 전환 안내 대상이 아니면(Chrome 등) 설치 창을 자동으로 묻는다
+    if (env.isAndroid && !env.standalone && !guideKind()) autoGuide('install');
   });
+  // 설치 창이 가능하면 설치, 아니면 해당 환경의 안내를 다시 보여 준다 (다시 보지 않기로 끈 안내도 열림)
   E.btnInstall.addEventListener('click', function () {
-    if (!installPrompt) { E.btnInstall.hidden = true; return; }
-    var p = installPrompt;
-    installPrompt = null;
-    E.btnInstall.hidden = true;
-    try { p.prompt(); } catch (e) { /* 무시 */ }
+    var kind = guideKind();
+    if (installPrompt || !kind) promptInstall();
+    else showGuide(kind);
   });
   window.addEventListener('appinstalled', function () {
     installPrompt = null;
     E.btnInstall.hidden = true;
+    closeGuide();
     toast('설치되었습니다', { kind: 'ok', duration: 2600 });
   });
 
-  function maybeShowIosHint() {
-    if (pref.iosHintDone) return;
-    if (!/^https?:$/.test(location.protocol)) return;
-    var ua = navigator.userAgent || '';
-    var isIos = /iPad|iPhone|iPod/.test(ua) ||
-                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (!isIos) return;
-    if (navigator.standalone === true) return;                       // 이미 설치 실행 중
-    if (mqStandalone && mqStandalone.matches) return;
-    E.bnIos.hidden = false;
+  /** 시작 시 1회 — loadPref() 뒤에 불러야 한다 (consumeNoChromeMark 참조) */
+  function startInstallGuide() {
+    consumeNoChromeMark();
+    updateInstallBtn();
+    autoGuide(guideKind());
   }
-  E.bnIosClose.addEventListener('click', function () {
-    E.bnIos.hidden = true;
-    pref.iosHintDone = true;
-    savePref();
-  });
 
   /* ==========================================================
      18. 스크롤 위치 기억
@@ -4518,7 +4879,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   render();
   restoreScroll();                            // 그 그룹에서 마지막으로 보던 위치로
   if (!storageOk) E.bnStorage.hidden = false;
-  maybeShowIosHint();
+  startInstallGuide();                       // 설치 안내 · 헤더 '앱 설치' 버튼 (v1.4.1)
 
   // 다른 탭에서 변경된 데이터를 반영한다
   window.addEventListener('storage', function (ev) {
