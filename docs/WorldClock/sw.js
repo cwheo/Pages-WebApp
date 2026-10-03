@@ -4,7 +4,7 @@
 //
 // Author : 허창원 (Changwon Heo)
 // Copyright (c) 2026 허창원. All rights reserved.
-const CACHE = 'worldclock-v1.1.1';
+const CACHE = 'worldclock-v1.1.2';
 const ASSETS = [
   './',
   './index.html',

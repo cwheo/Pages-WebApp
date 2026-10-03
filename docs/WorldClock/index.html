@@ -256,7 +256,8 @@
   .guide-btns { display: flex; gap: 8px; margin-left: auto; }   /* 좁으면 버튼 묶음째 다음 줄로 */
 
   /* ---------- 앱 정보 대화상자 (설치 안내 창 스타일 재사용) ---------- */
-  dialog.about { width: min(360px, calc(100vw - 32px)); }
+  dialog.about { width: min(440px, calc(100vw - 32px)); }   /* 제목(앱명 · 버전 · 빌드)이 한 줄에 들어가는 폭 */
+  .about-build { white-space: nowrap; }   /* 좁은 화면에서 줄이 넘어가면 (Build: …) 를 통째로 다음 줄로 */
   .about-info { margin: 4px 0 6px; display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; font-size: 14.5px; }
   .about-info dt { color: var(--muted); }
   .about-info dd { margin: 0; word-break: break-all; font-variant-numeric: tabular-nums; }
@@ -381,9 +382,9 @@
   'use strict';
 
   // 앱 버전 - 09_ChangeVersionName.py 로 sw.js CACHE 와 함께 변경한다
-  var APP_VERSION = '1.1.1';
+  var APP_VERSION = '1.1.2';
   // 빌드 일시 - 09_ChangeVersionName.py 가 버전을 바꿀 때 실행한 일시로 함께 바꾼다
-  var BUILD_DATE = '2026-10-03 19:49:46';
+  var BUILD_DATE = '2026-10-03 20:20:15';
 
   var MAX = 10, MIN = 1;
   var KEY_CITIES = 'worldclock.cities.v1';
@@ -1144,8 +1145,12 @@
   // 이메일은 HTML 원문에 통째로 두지 않고 실행 중에 조립한다 (주소 수집 봇 대비)
   document.getElementById('aboutMail').textContent = ['changwon.heo', 'gmail.com'].join('@');
   // 앱명 · 버전 · 빌드 일시(분까지) - 예: WorldClock v1.1.1 (Build: 2026-10-03 20:06)
-  document.getElementById('aboutTitle').textContent =
-    'WorldClock v' + APP_VERSION + ' (Build: ' + BUILD_DATE.slice(0, 16) + ')';
+  var aboutTitle = document.getElementById('aboutTitle');
+  var aboutBuild = document.createElement('span');
+  aboutBuild.className = 'about-build';
+  aboutBuild.textContent = '(Build: ' + BUILD_DATE.slice(0, 16) + ')';
+  aboutTitle.textContent = 'WorldClock v' + APP_VERSION + ' ';
+  aboutTitle.appendChild(aboutBuild);
 
   // 업데이트 확인 - 서버의 sw.js 가 바뀌었으면 새 버전을 받아 다시 연다
   // (sw.js 가 skipWaiting + clients.claim 이므로 설치되면 곧바로 controllerchange 가 온다)
