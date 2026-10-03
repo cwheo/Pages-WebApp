@@ -359,10 +359,10 @@
 
 <dialog id="about" class="guide about" aria-label="앱 정보">
   <div class="guide-body">
+    <h3 id="aboutTitle"></h3>
     <dl class="about-info">
       <dt>만든 사람</dt><dd>허창원</dd>
       <dt>연락처</dt><dd class="about-mail" id="aboutMail"></dd>
-      <dt>빌드 일시</dt><dd id="aboutBuild"></dd>
     </dl>
     <p class="about-status" id="aboutStatus" role="status" hidden></p>
   </div>
@@ -1143,7 +1143,9 @@
 
   // 이메일은 HTML 원문에 통째로 두지 않고 실행 중에 조립한다 (주소 수집 봇 대비)
   document.getElementById('aboutMail').textContent = ['changwon.heo', 'gmail.com'].join('@');
-  document.getElementById('aboutBuild').textContent = BUILD_DATE;
+  // 앱명 · 버전 · 빌드 일시(분까지) - 예: WorldClock v1.1.1 (Build: 2026-10-03 20:06)
+  document.getElementById('aboutTitle').textContent =
+    'WorldClock v' + APP_VERSION + ' (Build: ' + BUILD_DATE.slice(0, 16) + ')';
 
   // 업데이트 확인 - 서버의 sw.js 가 바뀌었으면 새 버전을 받아 다시 연다
   // (sw.js 가 skipWaiting + clients.claim 이므로 설치되면 곧바로 controllerchange 가 온다)
