@@ -1035,6 +1035,26 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
 .btn:disabled { opacity: .45; cursor: default; }
 .btnrow .grow { margin-right: auto; }
 
+/* 선택 대화상자의 세로 목록 — 항목 수가 정해지지 않은 선택지(그룹)를 담는다 */
+.choices { display: flex; flex-direction: column; gap: 6px; }
+.choice {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 14.5px; font-weight: 600;
+  text-align: left;
+  transition: filter var(--dur) var(--ease);
+}
+.choice:hover { filter: brightness(.97); }
+html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
+.choice .name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.choice .sub { flex: 0 0 auto; font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
+
 /* ============================================================
    7. 토스트
    ============================================================ */
@@ -1298,6 +1318,10 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   <button type="button" role="menuitem" id="cmEdit">
     <svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg><span>편집</span>
   </button>
+  <!-- 그룹이 하나라도 있을 때만 보인다 -->
+  <button type="button" role="menuitem" id="cmCopy">
+    <svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><span>다른 그룹에 복사…</span>
+  </button>
   <button type="button" role="menuitem" id="cmDelete" class="danger">
     <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><span>삭제</span>
   </button>
@@ -1388,6 +1412,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askBody">
     <h2 id="askTitle"></h2>
     <p id="askBody"></p>
+    <!-- 세로 선택 목록 — cfg.choices 가 있을 때만 (다른 그룹에 복사) -->
+    <div class="choices" id="askList" hidden></div>
     <div class="btnrow" id="askBtns"></div>
   </div>
 </div>
@@ -1475,9 +1501,9 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.4.1';
+  var APP_VERSION = '1.4.2';
   // 빌드 일시 — 09_ChangeVersionName.py 가 버전을 바꿀 때 실행한 일시로 함께 바꾼다 (앱 정보 창 제목)
-  var BUILD_DATE = '2026-10-03 22:06:56';
+  var BUILD_DATE = '2026-10-14 09:02:15';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 4;                 // 4 = 제목(title)·카드 표시(show) (3 = color, 2 = groups, 1 = 그룹 없음)
@@ -1698,6 +1724,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     cmTop: $('cmTop'),
     cmBottom: $('cmBottom'),
     cmEdit: $('cmEdit'),
+    cmCopy: $('cmCopy'),
     cmDelete: $('cmDelete'),
     miGroups: $('miGroups'),
     miSort: $('miSort'),
@@ -1748,6 +1775,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     askScrim: $('askScrim'),
     askTitle: $('askTitle'),
     askBody: $('askBody'),
+    askList: $('askList'),
     askBtns: $('askBtns'),
     aboutScrim: $('aboutScrim'),
     aboutTitle: $('aboutTitle'),
@@ -3151,6 +3179,76 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     pendingUndo = { toast: t };
   }
 
+  /**
+   * 다른 그룹에 복사 — 대상 그룹을 고르게 한다. 현재 그룹도 목록에 두어 '복제' 로 쓸 수 있게 한다.
+   * 목록 순서는 칩 바와 같다: [그룹…][미분류]
+   */
+  function pickCopyTarget(id) {
+    var it = itemById(id);
+    if (!it) return;
+    var cur = it.groupId == null ? 'none' : it.groupId;
+    var head = sortKey(it);
+    if (head.length > 30) head = head.slice(0, 30) + '…';
+    var keys = state.groups.map(function (g) { return g.id; }).concat(['none']);
+    ask({
+      title: '다른 그룹에 복사',
+      body: '「' + head + '」의 사본을 넣을 그룹을 고르세요. 원본은 그대로 남습니다.',
+      choices: keys.map(function (k) {
+        return { label: groupLabel(k), value: k,
+                 sub: k === cur ? '현재 그룹 · 복제' : countInGroup(k) + '개' };
+      }),
+      buttons: [{ label: '취소', value: null }]
+    }).then(function (k) { if (k) copyToGroup(id, k); });
+  }
+
+  /**
+   * 사본을 만든다 (key = 그룹 id | 'none').
+   * 다른 그룹이면 그 그룹 최상단(문구 추가와 같은 자리), 같은 그룹이면 원본 바로 아래.
+   * 원본을 통째로 복제한 뒤 id·그룹·일시만 바꾸므로, items 에 새 필드가 생겨도 여기는 고칠 필요가 없다.
+   */
+  function copyToGroup(id, key) {
+    var src = itemById(id);
+    if (!src) return;
+    var gid = key === 'none' ? null : key;
+    if (gid && !groupById(gid)) return;
+    var copy = JSON.parse(JSON.stringify(src));          // show 등 하위 객체를 원본과 공유하지 않는다
+    copy.id = uid();
+    copy.groupId = gid;
+    copy.createdAt = copy.updatedAt = nowIso();
+    var same = (src.groupId || null) === gid;
+    var idx = indexOfId(id);
+
+    flip(function () {
+      setState(function (items) {
+        if (same) items.splice(idx + 1, 0, copy);        // 같은 그룹 — 원본 바로 아래
+        else items.unshift(copy);                        // 다른 그룹 — 그 그룹 최상단
+      });
+    });
+
+    if (same) {
+      flash(copy.id, 'fresh', 1400);
+      toast('복제했습니다', { kind: 'ok', duration: 1800 });
+      return;
+    }
+    // 보던 화면은 그대로 두고, 원하면 [보기] 로 사본이 있는 곳으로 간다
+    toast('「' + groupLabel(key) + '」에 복사했습니다', {
+      kind: 'ok',
+      duration: 5000,
+      action: {
+        label: '보기',
+        onClick: function () {
+          if (!itemById(copy.id)) return;
+          var visible = ui.group === 'all' ||
+                        (ui.group === 'none' ? gid == null : ui.group === gid);
+          if (!visible) selectGroup(key, { top: true });
+          window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' });
+          forgetScroll();
+          flash(copy.id, 'fresh', 1400);
+        }
+      }
+    });
+  }
+
   /* ==========================================================
      9. 순서 변경 — 카드 메뉴의 이동 항목
      ==========================================================
@@ -3380,6 +3478,7 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     E.cmTop.disabled = locked || atTop;
     E.cmDown.disabled = locked || atBottom;
     E.cmBottom.disabled = locked || atBottom;
+    E.cmCopy.hidden = !state.groups.length;     // 복사는 검색 중에도 가능
   }
 
   function openCardMenu(id, btn) {
@@ -3452,6 +3551,11 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
     var id = cardMenuId;
     closeCardMenu(false);
     if (id) openEdit(id);
+  });
+  E.cmCopy.addEventListener('click', function () {
+    var id = cardMenuId;
+    closeCardMenu(false);
+    if (id) pickCopyTarget(id);
   });
   E.cmDelete.addEventListener('click', function () {
     var id = cardMenuId;
@@ -3553,7 +3657,8 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
      13. 확인 / 선택 대화상자
      ========================================================== */
   /**
-   * ask({title, body, buttons:[{label, value, kind, grow}]}) → Promise<value>
+   * ask({title, body, choices:[{label, sub, value}], buttons:[{label, value, kind, grow}]}) → Promise<value>
+   * choices 는 본문 아래 세로 목록으로 놓인다(개수가 정해지지 않은 선택지용).
    * 취소는 null 을 돌려준다.
    */
   var askResolve = null;
@@ -3564,9 +3669,21 @@ html[data-theme="dark"] .btn.danger { color: #16181d; }
       E.askTitle.textContent = cfg.title || '';
       E.askBody.textContent = cfg.body || '';
       E.askBody.hidden = !cfg.body;
+      while (E.askList.firstChild) E.askList.removeChild(E.askList.firstChild);
       while (E.askBtns.firstChild) E.askBtns.removeChild(E.askBtns.firstChild);
 
       var first = null;
+      var choices = cfg.choices || [];
+      E.askList.hidden = !choices.length;
+      choices.forEach(function (c) {
+        var btn = el('button', 'choice');
+        btn.type = 'button';
+        btn.appendChild(el('span', 'name', c.label));
+        if (c.sub) btn.appendChild(el('span', 'sub', c.sub));
+        btn.addEventListener('click', function () { closeAsk(c.value); });
+        E.askList.appendChild(btn);
+        if (!first) first = btn;
+      });
       (cfg.buttons || []).forEach(function (b) {
         var btn = el('button', 'btn' + (b.kind ? ' ' + b.kind : '') + (b.grow ? ' grow' : ''), b.label);
         btn.type = 'button';
