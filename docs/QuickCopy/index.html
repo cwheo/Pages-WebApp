@@ -759,6 +759,9 @@ html[data-theme="dark"] .fab { color: #10131a; box-shadow: 0 8px 22px rgba(0, 0,
 .sheet input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
 .sheet .meta .err { color: var(--danger); font-weight: 600; }
 
+/* 경로 복사 — 긴 경로는 줄바꿈하지 않고 가로로 스크롤한다 */
+#pathText { min-height: 120px; white-space: pre; font-family: Consolas, "Cascadia Mono", monospace; font-size: 14px; }
+
 /* 편집 모달 — 치환 결과 미리보기 · 안내 줄 */
 .substpv {
   display: flex; align-items: baseline; gap: 8px;
@@ -1292,6 +1295,9 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
     <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><span>전체 삭제</span>
   </button>
   <hr>
+  <button type="button" role="menuitem" id="miPaths">
+    <svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><span>경로 복사…</span>
+  </button>
   <button type="button" role="menuitem" id="miTokens">
     <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><span>치환 변수 (날짜·시각)</span>
   </button>
@@ -1446,6 +1452,25 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
   </div>
 </div>
 
+<!-- 경로 복사 — 탐색기 '경로로 복사'(Ctrl+Shift+C) 결과를 따옴표 없이 다시 복사한다.
+     메인 화면에서 경로를 Ctrl+V 하면 자동으로 열리고, 메뉴에서도 열 수 있다 -->
+<div class="scrim" id="pathScrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pathTitle">
+    <h2 id="pathTitle">경로 복사</h2>
+    <p>탐색기에서 <b>Ctrl+Shift+C</b>(경로로 복사)로 복사한 경로를 따옴표 없이 다시 복사합니다.</p>
+    <textarea id="pathText" spellcheck="false" autocomplete="off" wrap="off"
+      placeholder="경로를 붙여넣으세요 (한 줄에 하나)" aria-label="경로 목록"></textarea>
+    <div class="meta">
+      <span id="pathCount">0개 경로</span>
+      <span>Enter 줄바꿈 · Shift+Enter 공백 · Esc 닫기</span>
+    </div>
+    <div class="btnrow">
+      <button type="button" class="btn" id="pathSpace">공백으로 이어 복사</button>
+      <button type="button" class="btn primary" id="pathPlain">따옴표 없이 복사</button>
+    </div>
+  </div>
+</div>
+
 <!-- 앱 정보 -->
 <div class="scrim" id="aboutScrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
@@ -1501,9 +1526,9 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
   /* ==========================================================
      0. 상수 · 상태
      ========================================================== */
-  var APP_VERSION = '1.4.2';
+  var APP_VERSION = '1.4.3';
   // 빌드 일시 — 09_ChangeVersionName.py 가 버전을 바꿀 때 실행한 일시로 함께 바꾼다 (앱 정보 창 제목)
-  var BUILD_DATE = '2026-10-14 09:02:15';
+  var BUILD_DATE = '2026-10-26 16:17:17';
   var K_DATA = 'quickcopy.data.v1';
   var K_PREF = 'quickcopy.pref.v1';
   var SCHEMA = 4;                 // 4 = 제목(title)·카드 표시(show) (3 = color, 2 = groups, 1 = 그룹 없음)
@@ -1735,8 +1760,14 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
     miExport: $('miExport'),
     miImport: $('miImport'),
     miClear: $('miClear'),
+    miPaths: $('miPaths'),
     miTokens: $('miTokens'),
     miAbout: $('miAbout'),
+    pathScrim: $('pathScrim'),
+    pathText: $('pathText'),
+    pathCount: $('pathCount'),
+    pathSpace: $('pathSpace'),
+    pathPlain: $('pathPlain'),
     importFile: $('importFile'),
     editScrim: $('editScrim'),
     editTitle: $('editTitle'),
@@ -2898,7 +2929,7 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
   function anyScrimOpen() {
     return !E.editScrim.hidden || !E.askScrim.hidden || !E.aboutScrim.hidden ||
            !E.manualScrim.hidden || !E.groupScrim.hidden || !E.promptScrim.hidden ||
-           !E.tokensScrim.hidden || !E.guideScrim.hidden;
+           !E.tokensScrim.hidden || !E.guideScrim.hidden || !E.pathScrim.hidden;
   }
 
   /** 겹쳐 열렸을 때 위에 있는 것 — Esc·Tab 트랩·배경 클릭이 이것을 대상으로 한다 */
@@ -2908,6 +2939,7 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
     if (!E.promptScrim.hidden) return E.promptScrim;      // 그룹 관리 위에 열린다
     if (!E.askScrim.hidden) return E.askScrim;
     if (!E.tokensScrim.hidden) return E.tokensScrim;      // 편집 모달 위에 열린다
+    if (!E.pathScrim.hidden) return E.pathScrim;
     if (!E.groupScrim.hidden) return E.groupScrim;
     if (!E.editScrim.hidden) return E.editScrim;
     if (!E.aboutScrim.hidden) return E.aboutScrim;
@@ -4371,6 +4403,66 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
   }
 
   /* ==========================================================
+     15-1. 경로 복사
+     ==========================================================
+     브라우저는 탐색기에서 끌어다 놓은 파일의 전체 경로를 페이지에 주지 않는다.
+     그래서 탐색기 '경로로 복사'(Ctrl+Shift+C)가 만든 "C:\a b\c.txt" 를 붙여넣어 받는다.
+       Enter       : 따옴표를 떼고 줄바꿈(CRLF)으로 이어 복사
+       Shift+Enter : 공백으로 이어 복사 — 공백이 든 경로만 따옴표로 감싼다(명령줄 인자로 그대로 쓰도록)
+     ========================================================== */
+  /** C:\… · \\서버\… 모양인가 (붙여넣기 자동 열기 판단용) */
+  var PATH_RE = /^(?:[A-Za-z]:\\|\\\\[^\\\s]+\\)/;
+
+  /** 붙여넣은 글을 경로 배열로 — 줄마다 "…" 묶음이 있으면 그것들을, 없으면 줄 전체를 하나로 */
+  function parsePaths(text) {
+    var out = [];
+    String(text).split(/\r?\n/).forEach(function (line) {
+      var quoted = line.match(/"[^"]*"/g);
+      var parts = quoted ? quoted.map(function (q) { return q.slice(1, -1); }) : [line];
+      parts.forEach(function (p) {
+        p = p.replace(/"/g, '').trim();
+        if (p) out.push(p);
+      });
+    });
+    return out;
+  }
+
+  function looksLikePaths(text) {
+    var list = parsePaths(text);
+    return list.length > 0 && list.every(function (p) { return PATH_RE.test(p); });
+  }
+
+  function syncPathCount() {
+    E.pathCount.textContent = parsePaths(E.pathText.value).length + '개 경로';
+  }
+
+  function openPaths(text) {
+    var list = text ? parsePaths(text) : [];
+    E.pathText.value = list.join('\n');
+    syncPathCount();
+    openScrim(E.pathScrim, E.pathText);
+    // 커서를 끝에 둔다 — 그대로 Enter 를 누르면 복사된다
+    setTimeout(function () {
+      var n = E.pathText.value.length;
+      try { E.pathText.setSelectionRange(n, n); } catch (e) { /* 무시 */ }
+    }, 0);
+  }
+
+  /** spaced=false → 줄바꿈, true → 공백 */
+  function copyPaths(spaced) {
+    var list = parsePaths(E.pathText.value);
+    if (!list.length) {
+      toast('복사할 경로가 없습니다', { kind: 'error' });
+      return;
+    }
+    var out = spaced
+      ? list.map(function (p) { return /\s/.test(p) ? '"' + p + '"' : p; }).join(' ')
+      : list.join('\r\n');
+    closeScrim(E.pathScrim);
+    copyText(out, null, list.length > 1 ? list.length + '개 경로 — ' + list[0] : out);
+  }
+
+  /* ==========================================================
      16. 전역 이벤트 · 키보드 단축키
      ========================================================== */
   E.btnAdd.addEventListener('click', openAdd);
@@ -4399,12 +4491,29 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
   E.miExport.addEventListener('click', function () { closeMenu(false); exportJson(); });
   E.miImport.addEventListener('click', function () { closeMenu(false); importJson(); });
   E.miClear.addEventListener('click', function () { closeMenu(false); clearAll(); });
+  E.miPaths.addEventListener('click', function () { closeMenu(false); openPaths(''); });
   E.miTokens.addEventListener('click', function () { closeMenu(false); openTokens(); });
   E.miAbout.addEventListener('click', function () { closeMenu(false); openAbout(); });
 
+  E.pathText.addEventListener('input', syncPathCount);
+  E.pathPlain.addEventListener('click', function () { copyPaths(false); });
+  E.pathSpace.addEventListener('click', function () { copyPaths(true); });
+
+  // 메인 화면에서 Ctrl+V — 붙여넣은 글이 전부 경로 모양이면 경로 복사 창을 연다.
+  // 입력 중이거나 창·메뉴가 떠 있으면, 또 경로가 아니면 아무것도 하지 않는다
+  document.addEventListener('paste', function (ev) {
+    var t = ev.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (anyScrimOpen() || !E.menu.hidden || cardMenuOpen()) return;
+    var text = ev.clipboardData ? ev.clipboardData.getData('text/plain') : '';
+    if (!looksLikePaths(text)) return;
+    ev.preventDefault();
+    openPaths(text);
+  });
+
   // 스크림 바깥(배경) 클릭으로 닫기
   [E.editScrim, E.askScrim, E.aboutScrim, E.manualScrim, E.groupScrim, E.promptScrim,
-   E.tokensScrim, E.guideScrim].forEach(function (scrim) {
+   E.tokensScrim, E.guideScrim, E.pathScrim].forEach(function (scrim) {
     scrim.addEventListener('pointerdown', function (ev) {
       if (ev.target !== scrim) return;
       if (scrim === E.askScrim) closeAsk(null);
@@ -4432,6 +4541,15 @@ html[data-theme="dark"] .choice:hover { filter: brightness(1.18); }
     if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'Enter' || ev.keyCode === 13)) {
       // 안내 표가 편집 모달 위에 떠 있으면 저장하지 않는다 (표를 먼저 닫아야 한다)
       if (!E.editScrim.hidden && E.tokensScrim.hidden) { ev.preventDefault(); commitEdit(); return; }
+    }
+
+    // 경로 복사 창 — Enter 줄바꿈 복사, Shift+Enter 공백 복사.
+    // 버튼에 포커스가 있으면 그 버튼의 Enter 동작을 따르고, 한글 조합 중 Enter 는 건드리지 않는다
+    if (topScrim() === E.pathScrim && (ev.key === 'Enter' || ev.keyCode === 13) &&
+        !ev.ctrlKey && !ev.metaKey && !ev.altKey && !ev.isComposing && !(t && t.tagName === 'BUTTON')) {
+      ev.preventDefault();
+      copyPaths(ev.shiftKey);
+      return;
     }
 
     // Esc — 모달 / 메뉴 / 검색 닫기
